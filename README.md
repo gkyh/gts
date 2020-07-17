@@ -26,7 +26,7 @@ golang搭建极简的原生WEB后台项目
 
     r.Use(ws)  
     r.Use(ws2)   
-    r.Group("/test", testHandler, ws3)
+    r.Group("/test", testHandler, HandleIterceptor)
 
     r.Get("/login", func(w http.ResponseWriter, r *http.Request) {  
 
@@ -80,6 +80,34 @@ golang搭建极简的原生WEB后台项目
 
     }  
   }  
+
+  func HandleIterceptor(next http.HandlerFunc) http.HandlerFunc {. 
+    return func(w http.ResponseWriter, r *http.Request) {   
+  
+    ip := r.RemoteAddr   
+    fmt.Println("handleIterceptor,ip:" + ip)   
+
+    user, _ := gts.SessionVal(r, "username") 
+    if user != nil { 
+
+      fmt.Println(user.(string))   
+  
+      v := gts.ContextValue{   
+        "reqIP":    ip,   
+        "username": user.(string),   
+      }  
+  
+      ctx := context.WithValue(r.Context(), "context", v)   
+      next(w, r.WithContext(ctx))   
+      return  
+    }  
+  
+    http.Redirect(w, r, "/login", http.StatusFound)  
+    //io.WriteString(w, "on session")  
+    return   
+  
+  }. 
+  }
   ```
   
   ###TestConterller
