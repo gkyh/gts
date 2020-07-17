@@ -119,9 +119,9 @@ golang搭建极简的原生WEB后台项目
   type TestConterller struct {    
   }   
 
-  func (p *TestConterller) Router(base string, router *gts.Router, handle ...gts.HandlerFun) {
+  func (p *TestConterller) Router(base string, router *gts.Router) {
 
-	  router.Any("/list", p.mlogHandler, handle...)  
+	  router.Any("/list", p.mlogHandler)  
   
   }  
 

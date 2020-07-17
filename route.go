@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
@@ -18,6 +19,7 @@ type Router struct {
 var (
 	fileLen    = 0
 	fileRoutes map[string]http.HandlerFunc
+	mwRoutes   map[string]HandlerFun
 	Type       = map[string]int{
 		"Any":    0,
 		"GET":    1,
@@ -30,7 +32,7 @@ var (
 func New() *Router {
 
 	fileRoutes = make(map[string]http.HandlerFunc)
-
+	mwRoutes = make(map[string]HandlerFun)
 	return &Router{routes: []map[string]http.HandlerFunc{fileRoutes, fileRoutes, fileRoutes, fileRoutes, fileRoutes}, rLen: make([]int, 5), ses: nil}
 }
 
@@ -95,12 +97,27 @@ func middleware(mws []HandlerFun, h http.HandlerFunc) http.HandlerFunc {
 
 		h = run(mws[i], h)
 	}
-	return h
+	return F(h)
 }
 
 func run(m HandlerFun, h http.HandlerFunc) http.HandlerFunc {
 
 	return m(h)
+}
+
+func F(h http.HandlerFunc) http.HandlerFunc {
+
+	v := reflect.ValueOf(h)
+	fn := runtime.FuncForPC(v.Pointer()).Name()
+	fn = fmt.Sprintf("R:%s", fn)
+
+	for k, f := range mwRoutes {
+
+		if strings.Contains(fn, k) {
+			return f(h)
+		}
+	}
+	return h
 }
 
 func (p *Router) R(i int, path string, h http.HandlerFunc, f ...HandlerFun) {
@@ -155,17 +172,30 @@ func (p *Router) Group(url string, i interface{}, params ...HandlerFun) {
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
 
+	class := fmt.Sprintf("%v", t)
+
+	if len(params) > 0 {
+
+		idx := strings.LastIndex(class, ".")
+		if idx > 0 {
+
+			idx++
+			class = string([]rune(class)[idx:len(class)])
+		}
+		mwRoutes[class] = params[0]
+	}
+
 	_, ins := t.MethodByName("Router")
 	if ins {
 
 		mh := v.MethodByName("Router")
-		in := make([]reflect.Value, len(params)+2)
+		in := make([]reflect.Value, 2)
 		in[0] = reflect.ValueOf(url)
 		in[1] = reflect.ValueOf(p)
 
-		for k, param := range params {
-			in[k+2] = reflect.ValueOf(param)
-		}
+		//for k, param := range params {
+		//	in[k+2] = reflect.ValueOf(param)
+		//}
 		mh.Call(in)
 	}
 
