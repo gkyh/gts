@@ -1,7 +1,6 @@
 package gts
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -11,9 +10,10 @@ import (
 
 type Router struct {
 	rLen   []int
-	routes []map[string]http.HandlerFunc
+	routes []map[string]HandlerFunc
 	mws    []HandlerFun
 	ses    *Session
+	base   string
 }
 
 var (
@@ -33,7 +33,13 @@ func New() *Router {
 
 	fileRoutes = make(map[string]http.HandlerFunc)
 	mwRoutes = make(map[string]HandlerFun)
-	return &Router{routes: []map[string]http.HandlerFunc{fileRoutes, fileRoutes, fileRoutes, fileRoutes, fileRoutes}, rLen: make([]int, 5), ses: nil}
+
+	return &Router{
+		routes: []map[string]HandlerFunc{make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc)},
+		rLen:   make([]int, 5),
+		ses:    nil,
+		base:   "",
+	}
 }
 
 func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
@@ -41,22 +47,21 @@ func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
 	p.ses = NewSession(cookieName, maxLifeTime, cookieTime)
 }
 
-type HandlerFun func(http.HandlerFunc) http.HandlerFunc
+type HandlerFunc func(*Context)
+type HandlerFun func(HandlerFunc) HandlerFunc
 
 func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	url := r.URL.Path
 	method := r.Method
 
+	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
+
 	fmt.Println("[" + method + "]" + url)
 	if p.rLen[0] > 0 {
 		if fun, ok := p.routes[0][url]; ok {
 
-			if p.ses == nil {
-				fun(w, r)
-			} else {
-				fun(w, r.WithContext(context.WithValue(r.Context(), "session", p.ses)))
-			}
+			fun(ctx)
 			return
 		}
 	}
@@ -66,11 +71,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if t > 0 && p.rLen[t] > 0 {
 
 		if fun, ok := p.routes[t][url]; ok {
-			if p.ses == nil {
-				fun(w, r)
-			} else {
-				fun(w, r.WithContext(context.WithValue(r.Context(), "session", p.ses)))
-			}
+			fun(ctx)
 			return
 		}
 	}
@@ -90,7 +91,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func middleware(mws []HandlerFun, h http.HandlerFunc) http.HandlerFunc {
+func M(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 
 	l := len(mws)
 	for i := l - 1; i >= 0; i-- {
@@ -100,17 +101,17 @@ func middleware(mws []HandlerFun, h http.HandlerFunc) http.HandlerFunc {
 	return F(h)
 }
 
-func run(m HandlerFun, h http.HandlerFunc) http.HandlerFunc {
+func run(m HandlerFun, h HandlerFunc) HandlerFunc {
 
 	return m(h)
 }
 
-func F(h http.HandlerFunc) http.HandlerFunc {
+func F(h HandlerFunc) HandlerFunc {
 
 	v := reflect.ValueOf(h)
 	fn := runtime.FuncForPC(v.Pointer()).Name()
-	fn = fmt.Sprintf("R:%s", fn)
-
+	fn = fmt.Sprintf("==>:%s", fn)
+	fmt.Print(fn + "\r\n")
 	for k, f := range mwRoutes {
 
 		if strings.Contains(fn, k) {
@@ -120,15 +121,18 @@ func F(h http.HandlerFunc) http.HandlerFunc {
 	return h
 }
 
-func (p *Router) R(i int, path string, h http.HandlerFunc, f ...HandlerFun) {
+func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
+	url := p.base + path
 	m := p.routes[i]
+
+	fmt.Print(url + ":")
 	if len(f) > 0 {
 
-		m[path] = middleware(p.mws, f[0](h))
+		m[url] = M(p.mws, f[0](h))
 	} else {
 
-		m[path] = middleware(p.mws, h)
+		m[url] = M(p.mws, h)
 	}
 	p.rLen[i]++
 }
@@ -146,28 +150,40 @@ func (p *Router) Use(h HandlerFun) {
 	p.mws = append(p.mws, h)
 }
 
-func (p *Router) Any(relativePath string, handler http.HandlerFunc, filter ...HandlerFun) {
+func (p *Router) Any(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	p.R(0, relativePath, handler, filter...)
 
 }
-func (p *Router) Get(relativePath string, handler http.HandlerFunc, filter ...HandlerFun) {
+
+func (p *Router) Get(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	p.R(1, relativePath, handler, filter...)
 
 }
-func (p *Router) Post(relativePath string, handler http.HandlerFunc, filter ...HandlerFun) {
+func (p *Router) Post(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	p.R(2, relativePath, handler, filter...)
 
 }
-func (p *Router) Delete(relativePath string, handler http.HandlerFunc, filter ...HandlerFun) {
+func (p *Router) Delete(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	p.R(3, relativePath, handler, filter...)
 
 }
 
-func (p *Router) Group(url string, i interface{}, params ...HandlerFun) {
+func (p *Router) Group(url string, h func(r *Router), params ...HandlerFun) {
+
+	//v := reflect.ValueOf(h)
+	//fn := runtime.FuncForPC(v.Pointer()).Name()
+	//fn = fmt.Sprintf("G:%s", fn)
+	//fmt.Println(fn)
+	p.base = url
+	h(p)
+	p.base = ""
+}
+
+func (p *Router) Route(url string, i interface{}, params ...HandlerFun) {
 
 	v := reflect.ValueOf(i)
 	t := reflect.TypeOf(i)
@@ -184,19 +200,19 @@ func (p *Router) Group(url string, i interface{}, params ...HandlerFun) {
 		}
 		mwRoutes[class] = params[0]
 	}
-
+	p.base = url
 	_, ins := t.MethodByName("Router")
 	if ins {
 
 		mh := v.MethodByName("Router")
-		in := make([]reflect.Value, 2)
-		in[0] = reflect.ValueOf(url)
-		in[1] = reflect.ValueOf(p)
+		in := make([]reflect.Value, 1)
+		in[0] = reflect.ValueOf(p)
 
 		//for k, param := range params {
 		//	in[k+2] = reflect.ValueOf(param)
 		//}
 		mh.Call(in)
 	}
+	p.base = ""
 
 }

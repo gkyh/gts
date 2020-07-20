@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+/*
 func Sessions(r *http.Request) *Session {
 
 	session := r.Context().Value("session").(*Session)
@@ -49,7 +50,7 @@ func SetSession(w http.ResponseWriter, r *http.Request, key interface{}, value i
 
 }
 
-/*
+
 var globalSessions *Session
 
 func Init(cookieName string, maxLifeTime, cookieTime int64) {
@@ -84,13 +85,13 @@ func GetVal(sid string, key interface{}) interface{} {
 
 	return globalSessions.GetVal(sid, key)
 }
-*/
+
 type ContextValue map[string]interface{}
 
 func (v ContextValue) Get(key string) interface{} {
 	return v[key]
 }
-
+*/
 /*Session会话管理*/
 type Session struct {
 	mCookieName  string       //客户端cookie名称
