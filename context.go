@@ -13,9 +13,9 @@ type Context struct {
 	Sessions *Session
 }
 
-func (c *Context) Write(status int, b []byte) {
+func (c *Context) Write(b []byte) {
 
-	c.Writer.WriteHeader(status)
+	w.WriteHeader(http.StatusOK)
 	c.Writer.Write(b)
 }
 
@@ -29,17 +29,17 @@ func (c *Context) HTML(status int, s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	io.WriteString(w, s)
 }
 
-func (c *Context) JSON(m map[string]interface{}) {
+func (c *Context) JSON(status int, m map[string]interface{}) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	jsonBytes, _ := json.Marshal(m)
-	c.Writer.Write(jsonBytes)
+	w.Write(jsonBytes)
 }
 
 func (c *Context) Redirect(url string) {
