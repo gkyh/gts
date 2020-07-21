@@ -26,28 +26,30 @@ golang搭建极简的原生WEB后台项目
 
     r.Use(ws)  
     r.Use(ws2)   
-    r.Group("/test", testHandler, HandleIterceptor)
+    r.Route("/test", testHandler, HandleIterceptor)  
+    r.Group("/group", groupHandler)  
+      
+    r.Get("/login", func(ctx *gts.Context) {  
 
-    r.Get("/login", func(w http.ResponseWriter, r *http.Request) {  
-
-      gts.SetSession(w, r, "username", "root")  
-      io.WriteString(w, "login")   
+      ctx.SetSession("username", "root")
+      ctx.WriteString(200, "login")   
     })  
 
-    r.Get("/user", func(w http.ResponseWriter, r *http.Request) {  
+    r.Get("/user", func(c *gts.Context) {  
 
-      s, b := gts.SessionVal(r, "username")  
+      user, b := c.SessionVal("username")  
       if b {  
-        io.WriteString(w, s.(string))   
+        c.WriteString(200, user.(string))   
       } else {  
-        io.WriteString(w, "not found")  
+        c.WriteString(404, "not found")  
       }  
     })  
 
     //r.Any("/any", func)  
-    //r.Post("/any", func)  
-    //r.Get("/any", func)  
-    //r.Delete("/any", func)  
+    //r.Post("/post", func)  
+    //r.Get("/get", func)  
+    //r.Delete("/delete", func)  
+   
 
     if err := srv.ListenAndServe(); err != nil {
 
@@ -55,39 +57,35 @@ golang搭建极简的原生WEB后台项目
     }
 
   }
+  func groupHandler(route *gts.Router){  
+  
+  	route.Get("/test",testFunc)
+	route.Post("/test",testFunc)
+  }
 
+  func ws(next gts.HandlerFunc) gts.HandlerFunc {  
+     return func(ctx *gts.Context) {  
 
-  func ws(next http.HandlerFunc) http.HandlerFunc {  
-     return func(w http.ResponseWriter, r *http.Request) {  
+     ip := getRemoteIp(ctx.Request)
+      fmt.Println("request ip:" + ip)
 
-      ip := r.RemoteAddr  
-      fmt.Println("request ip:" + ip)  
-
-      next(w, r.WithContext(context.WithValue(r.Context(), "reqestIp", ip)))  
-      return  
-
-    }  
-  }  
-
-  func ws2(next http.HandlerFunc) http.HandlerFunc {   
-    return func(w http.ResponseWriter, r *http.Request) {   
-
-      ip := r.RemoteAddr  
-      fmt.Println("request ip=========:" + ip)   
-
-      next(w, r.WithContext(context.WithValue(r.Context(), "reqestIp2", ip)))   
-      return  
+	v := map[string]interface{}{
+			"reqIP": ip,
+	}
+	ctx.Set("context", v)
+	next(ctx)
 
     }  
   }  
+  
 
-  func HandleIterceptor(next http.HandlerFunc) http.HandlerFunc {. 
-    return func(w http.ResponseWriter, r *http.Request) {   
+  func HandleIterceptor(next gts.HandlerFunc) gts.HandlerFunc {. 
+    return func(c *gts.Context) {   
   
     ip := r.RemoteAddr   
     fmt.Println("handleIterceptor,ip:" + ip)   
 
-    user, _ := gts.SessionVal(r, "username") 
+    user, _ := c.SessionVal("username")
     if user != nil { 
 
       fmt.Println(user.(string))   
@@ -97,13 +95,12 @@ golang搭建极简的原生WEB后台项目
         "username": user.(string),   
       }  
   
-      ctx := context.WithValue(r.Context(), "context", v)   
-      next(w, r.WithContext(ctx))   
+      c.Set("context", v)  
+      next(c)  
       return  
     }  
   
-    http.Redirect(w, r, "/login", http.StatusFound)  
-    //io.WriteString(w, "on session")  
+    c.Redirect("/login")    
     return   
   
   }. 
@@ -118,16 +115,26 @@ golang搭建极简的原生WEB后台项目
     
   type TestConterller struct {    
   }   
-
-  func (p *TestConterller) Router(base string, router *gts.Router) {
+  //必须在Router方法中添加路由
+  func (p *TestConterller) Router(router *gts.Router) {
 
 	  router.Any("/list", p.mlogHandler)  
   
   }  
 
- func (p *TestConterller) ListHanlder(w http.ResponseWriter, r *http.Request) {  
+ func (p *TestConterller) ListHanlder(c *gts.Context) {  
  
  
  
  }  
  ```
+ 
+ Context
+
+```go   
+type Context struct {
+	Writer   http.ResponseWriter
+	Request  *http.Request
+	Sessions *Session
+}  
+```
