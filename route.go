@@ -63,13 +63,6 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
 
 	fmt.Println("[" + method + "]" + url)
-	if p.rLen[0] > 0 {
-		if fun, ok := p.routes[0][url]; ok {
-
-			fun(r, ctx)
-			return
-		}
-	}
 
 	var t int = 0
 	t = Type[method]
@@ -80,6 +73,15 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	/*
+		if p.rLen[0] > 0 {
+			if fun, ok := p.routes[0][url]; ok {
+
+				fun(r, ctx)
+				return
+			}
+		}
+	*/
 
 	//静态资源
 	if fileLen > 0 {
@@ -104,6 +106,7 @@ func M(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 
 		h = run(mws[i], h)
 	}
+
 	return F(h)
 }
 
@@ -116,8 +119,7 @@ func F(h HandlerFunc) HandlerFunc {
 
 	v := reflect.ValueOf(h)
 	fn := runtime.FuncForPC(v.Pointer()).Name()
-	fn = fmt.Sprintf("==>:%s", fn)
-	fmt.Print(fn + "\r\n")
+
 	for k, f := range mwRoutes {
 
 		if strings.Contains(fn, k) {
@@ -132,7 +134,11 @@ func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
 	url := p.base + path
 	m := p.routes[i]
 
-	fmt.Print(url + ":")
+	vh := reflect.ValueOf(h)
+	fn := runtime.FuncForPC(vh.Pointer()).Name()
+	fn = fmt.Sprintf("%s:==>:%s\r\n", url, fn)
+	fmt.Print(fn)
+
 	if len(f) > 0 {
 
 		m[url] = M(p.mws, f[0](h))
@@ -147,7 +153,6 @@ func (p *Router) Static(relativePath string, dirPath string) {
 
 	fileRoutes[relativePath] = func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Print(relativePath + "==>" + dirPath + "\r\n")
 		http.StripPrefix(relativePath, http.FileServer(http.Dir(dirPath))).ServeHTTP(w, r)
 	}
 	fileLen++
@@ -177,7 +182,9 @@ func (p *Router) Use(h HandlerFun) {
 
 func (p *Router) Any(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	p.R(0, relativePath, handler, filter...)
+	//p.R(0, relativePath, handler, filter...)
+	p.R(1, relativePath, handler, filter...)
+	p.R(2, relativePath, handler, filter...)
 
 }
 
@@ -194,6 +201,11 @@ func (p *Router) Post(relativePath string, handler HandlerFunc, filter ...Handle
 func (p *Router) Delete(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	p.R(3, relativePath, handler, filter...)
+
+}
+func (p *Router) Put(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
+
+	p.R(4, relativePath, handler, filter...)
 
 }
 
