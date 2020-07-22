@@ -15,7 +15,7 @@ type Context struct {
 
 func (c *Context) Write(b []byte) {
 
-	w.WriteHeader(http.StatusOK)
+	c.Writer.WriteHeader(http.StatusOK)
 	c.Writer.Write(b)
 }
 
@@ -42,6 +42,30 @@ func (c *Context) JSON(status int, m map[string]interface{}) {
 	w.Write(jsonBytes)
 }
 
+func (c *Context) Result(s string) {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, s)
+}
+
+func (c *Context) Msg(s string) {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, `{"code": 200, "msg": "`+s+`"}`)
+}
+
+func (c *Context) OK() {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, `{"code": 200, "msg": "处理成功"}`)
+}
+
 func (c *Context) Redirect(url string) {
 
 	w := c.Writer
@@ -62,18 +86,20 @@ func (c *Context) SessionVal(key interface{}) (interface{}, bool) {
 	}
 	return session.Get(c.Request, key)
 }
+func (c *Context) GetSession(key interface{}) interface{} {
 
-func (c *Context) Set(key string, v map[string]interface{}) {
+	session := c.Sessions
+	if session == nil {
+		return nil
+	}
+	i, b := session.Get(c.Request, key)
+	if b {
+		return i
+	} else {
 
-	ctx := context.WithValue(c.Request.Context(), key, v)
-	c.Request = c.Request.WithContext(ctx)
+		return nil
+	}
 }
-
-func (c *Context) Get(key string) map[string]interface{} {
-
-	return c.Request.Context().Value(key).(map[string]interface{})
-}
-
 func (c *Context) SetSession(key interface{}, value interface{}) bool {
 
 	w := c.Writer
@@ -94,4 +120,14 @@ func (c *Context) SetSession(key interface{}, value interface{}) bool {
 	}
 	return session.Set(r, key, value)
 
+}
+func (c *Context) Set(key string, v map[string]interface{}) {
+
+	ctx := context.WithValue(c.Request.Context(), key, v)
+	c.Request = c.Request.WithContext(ctx)
+}
+
+func (c *Context) Get(key string) map[string]interface{} {
+
+	return c.Request.Context().Value(key).(map[string]interface{})
 }
