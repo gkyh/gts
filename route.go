@@ -1,7 +1,6 @@
 package gts
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -34,6 +33,12 @@ var (
 	}
 )
 
+var logger RouteLogger
+
+type RouteLogger interface {
+	Println(v ...interface{})
+}
+
 func New() *Router {
 
 	fileRoutes = make(map[string]http.HandlerFunc)
@@ -52,6 +57,16 @@ func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
 	p.ses = NewSession(cookieName, maxLifeTime, cookieTime)
 }
 
+func (p *Router) Logger(log RouteLogger) {
+	logger = log
+}
+
+func print(v ...interface{}) {
+	if logger != nil {
+		logger.Println(v)
+	}
+}
+
 type HandlerFunc func(*http.Request, *Context)
 type HandlerFun func(HandlerFunc) HandlerFunc
 
@@ -62,7 +77,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
 
-	fmt.Println("[" + method + "]" + url)
+	print("[", method, "]", url)
 
 	var t int = 0
 	t = Type[method]
@@ -88,13 +103,13 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for k, f := range fileRoutes {
 
 			if strings.HasPrefix(url, k) {
-
-				fmt.Print(k + "\r\n")
 				f(w, r)
 				return
 			}
 		}
 	}
+
+	print("not found URL:", r.URL.String())
 	http.Error(w, "error URL:"+r.URL.String(), http.StatusBadRequest)
 
 }
@@ -136,8 +151,8 @@ func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	vh := reflect.ValueOf(h)
 	fn := runtime.FuncForPC(vh.Pointer()).Name()
-	fn = fmt.Sprintf("%s:==>:%s\r\n", url, fn)
-	fmt.Print(fn)
+
+	print(url, " ==> ", fn)
 
 	if len(f) > 0 {
 
