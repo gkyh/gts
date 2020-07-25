@@ -11,87 +11,37 @@ import (
 	"time"
 )
 
-/*
-func Sessions(r *http.Request) *Session {
-
-	session := r.Context().Value("session").(*Session)
-	return session
+type Store struct {
+	Sessions  *Session
+	SessionID string
 }
 
-func SessionID(r *http.Request) (string, bool) {
+func (c *Store) Get(key interface{}) interface{} {
 
-	session := r.Context().Value("session").(*Session)
-	return session.SessionID(r)
-}
-func SessionVal(r *http.Request, key interface{}) (interface{}, bool) {
+	session := c.Sessions
 
-	session := r.Context().Value("session").(*Session)
 	if session == nil {
-		return nil, false
+		return nil
 	}
-	return session.Get(r, key)
+	return session.GetVal(c.SessionID, key)
+
 }
+func (c *Store) Set(key interface{}, value interface{}) bool {
 
-func SetSession(w http.ResponseWriter, r *http.Request, key interface{}, value interface{}) bool {
-
-	session := r.Context().Value("session").(*Session)
+	session := c.Sessions
 	if session == nil {
 		return false
 	}
-	sid, _ := session.SessionID(r)
-	if sid == "" {
 
-		sid = session.New(w)
-
-		session.SetVal(sid, key, value)
-		return true
-	}
-	return session.Set(r, key, value)
+	session.SetVal(c.SessionID, key, value)
+	return true
 
 }
+func (c *Store) Del() {
 
-
-var globalSessions *Session
-
-func Init(cookieName string, maxLifeTime, cookieTime int64) {
-
-	globalSessions = NewSession(cookieName, maxLifeTime, cookieTime)
+	c.Sessions.Remove(c.SessionID)
 }
 
-func SessionID(r *http.Request) (string, bool) {
-
-	return globalSessions.SessionID(r)
-}
-
-func Set(w http.ResponseWriter, r *http.Request, key interface{}, value interface{}) bool {
-
-	sid, _ := globalSessions.SessionID(r)
-	if sid == "" {
-
-		sid = globalSessions.New(w)
-
-		globalSessions.SetVal(sid, key, value)
-		return true
-	}
-	return globalSessions.Set(r, key, value)
-
-}
-func Get(r *http.Request, key interface{}) (interface{}, bool) {
-
-	return globalSessions.Get(r, key)
-}
-
-func GetVal(sid string, key interface{}) interface{} {
-
-	return globalSessions.GetVal(sid, key)
-}
-
-type ContextValue map[string]interface{}
-
-func (v ContextValue) Get(key string) interface{} {
-	return v[key]
-}
-*/
 /*Session会话管理*/
 type Session struct {
 	mCookieName  string       //客户端cookie名称
@@ -172,6 +122,7 @@ func (ses *Session) GetVal(sessionID string, key interface{}) interface{} {
 
 	if session, ok := ses.mSessions[sessionID]; ok {
 		if val, ok := session.mValues[key]; ok {
+
 			return val
 		}
 	}

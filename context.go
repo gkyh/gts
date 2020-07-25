@@ -13,6 +13,14 @@ type Context struct {
 	Sessions *Session
 }
 
+func (c *Context) Session() *Store {
+
+	sid, _ := c.Sessions.SessionID(c.Request)
+	return &Store{
+		SessionID: sid,
+		Sessions:  c.Sessions,
+	}
+}
 func (c *Context) Write(b []byte) {
 
 	c.Writer.WriteHeader(http.StatusOK)
@@ -78,49 +86,7 @@ func (c *Context) SessionID() (string, bool) {
 	session := c.Sessions
 	return session.SessionID(c.Request)
 }
-func (c *Context) SessionVal(key interface{}) (interface{}, bool) {
 
-	session := c.Sessions
-	if session == nil {
-		return nil, false
-	}
-	return session.Get(c.Request, key)
-}
-func (c *Context) GetSession(key interface{}) interface{} {
-
-	session := c.Sessions
-	if session == nil {
-		return nil
-	}
-	i, b := session.Get(c.Request, key)
-	if b {
-		return i
-	} else {
-
-		return nil
-	}
-}
-func (c *Context) SetSession(key interface{}, value interface{}) bool {
-
-	w := c.Writer
-	r := c.Request
-
-	session := c.Sessions
-	if session == nil {
-		return false
-	}
-
-	sid, _ := session.SessionID(r)
-	if sid == "" {
-
-		sid = session.New(w)
-
-		session.SetVal(sid, key, value)
-		return true
-	}
-	return session.Set(r, key, value)
-
-}
 func (c *Context) Set(key string, v map[string]interface{}) {
 
 	ctx := context.WithValue(c.Request.Context(), key, v)
