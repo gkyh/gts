@@ -14,6 +14,7 @@ import (
 type Store struct {
 	Sessions  *Session
 	SessionID string
+	Response  http.ResponseWriter
 }
 
 func (c *Store) Get(key interface{}) interface{} {
@@ -32,7 +33,10 @@ func (c *Store) Set(key interface{}, value interface{}) bool {
 	if session == nil {
 		return false
 	}
+	if c.SessionID == "" {
 
+		c.SessionID = session.New(c.Response)
+	}
 	session.SetVal(c.SessionID, key, value)
 	return true
 

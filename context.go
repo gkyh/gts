@@ -19,6 +19,7 @@ func (c *Context) Session() *Store {
 	return &Store{
 		SessionID: sid,
 		Sessions:  c.Sessions,
+		Response:  c.Writer,
 	}
 }
 func (c *Context) Write(b []byte) {

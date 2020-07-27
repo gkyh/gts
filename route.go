@@ -114,7 +114,8 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func M(mws []HandlerFun, h HandlerFunc) HandlerFunc {
+//执行中间件
+func M(url string, mws []HandlerFun, h HandlerFunc) HandlerFunc {
 
 	l := len(mws)
 	for i := l - 1; i >= 0; i-- {
@@ -122,7 +123,7 @@ func M(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 		h = run(mws[i], h)
 	}
 
-	return F(h)
+	return F(url, h)
 }
 
 func run(m HandlerFun, h HandlerFunc) HandlerFunc {
@@ -130,7 +131,8 @@ func run(m HandlerFun, h HandlerFunc) HandlerFunc {
 	return m(h)
 }
 
-func F(h HandlerFunc) HandlerFunc {
+//执行拦截器
+func F(url string, h HandlerFunc) HandlerFunc {
 
 	v := reflect.ValueOf(h)
 	fn := runtime.FuncForPC(v.Pointer()).Name()
@@ -138,9 +140,15 @@ func F(h HandlerFunc) HandlerFunc {
 	for k, f := range mwRoutes {
 
 		if strings.Contains(fn, k) {
-			return f(h)
+			h = f(h)
 		}
+
+		if strings.HasPrefix(url, k) {
+			h = f(h)
+		}
+
 	}
+
 	return h
 }
 
@@ -156,11 +164,12 @@ func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	if len(f) > 0 {
 
-		m[url] = M(p.mws, f[0](h))
+		m[url] = M(url, p.mws, f[0](h))
 	} else {
 
-		m[url] = M(p.mws, h)
+		m[url] = M(url, p.mws, h)
 	}
+
 	p.rLen[i]++
 }
 
@@ -190,6 +199,7 @@ func (p *Router) Favicon(dirPath string) {
 	fileLen++
 }
 
+//添加中间件
 func (p *Router) Use(h HandlerFun) {
 
 	p.mws = append(p.mws, h)
@@ -227,6 +237,9 @@ func (p *Router) Put(relativePath string, handler HandlerFunc, filter ...Handler
 func (p *Router) Group(url string, h func(r *Router), params ...HandlerFun) {
 
 	p.base = url
+	if len(params) > 0 {
+		mwRoutes[url] = params[0]
+	}
 	h(p)
 	p.base = ""
 }
