@@ -110,40 +110,34 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	print("not found URL:", r.URL.String())
-	http.Error(w, "error URL:"+r.URL.String(), http.StatusBadRequest)
+	http.Error(w, "Bad URL:"+r.URL.String(), http.StatusBadRequest)
 
 }
 
 //执行中间件
-func M(url string, mws []HandlerFun, h HandlerFunc) HandlerFunc {
+func middleware(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 
 	l := len(mws)
 	for i := l - 1; i >= 0; i-- {
 
-		h = run(mws[i], h)
+		h = mws[i](h)
 	}
-
-	return F(url, h)
-}
-
-func run(m HandlerFun, h HandlerFunc) HandlerFunc {
-
-	return m(h)
+	return h
 }
 
 //执行拦截器
-func F(url string, h HandlerFunc) HandlerFunc {
+func filter(url string, h HandlerFunc) HandlerFunc {
 
 	v := reflect.ValueOf(h)
 	fn := runtime.FuncForPC(v.Pointer()).Name()
 
 	for k, f := range mwRoutes {
 
-		if strings.Contains(fn, k) {
+		if strings.Contains(fn, k) { //按类名
 			h = f(h)
 		}
 
-		if strings.HasPrefix(url, k) {
+		if strings.HasPrefix(url, k) { //按url
 			h = f(h)
 		}
 
@@ -152,7 +146,7 @@ func F(url string, h HandlerFunc) HandlerFunc {
 	return h
 }
 
-func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
+func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	url := p.base + path
 	m := p.routes[i]
@@ -164,10 +158,10 @@ func (p *Router) R(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	if len(f) > 0 {
 
-		m[url] = M(url, p.mws, f[0](h))
+		m[url] = filter(url, middleware(p.mws, f[0](h)))
 	} else {
 
-		m[url] = M(url, p.mws, h)
+		m[url] = filter(url, middleware(p.mws, h))
 	}
 
 	p.rLen[i]++
@@ -208,29 +202,29 @@ func (p *Router) Use(h HandlerFun) {
 func (p *Router) Any(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
 	//p.R(0, relativePath, handler, filter...)
-	p.R(1, relativePath, handler, filter...)
-	p.R(2, relativePath, handler, filter...)
+	p.add(1, relativePath, handler, filter...)
+	p.add(2, relativePath, handler, filter...)
 
 }
 
 func (p *Router) Get(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	p.R(1, relativePath, handler, filter...)
+	p.add(1, relativePath, handler, filter...)
 
 }
 func (p *Router) Post(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	p.R(2, relativePath, handler, filter...)
+	p.add(2, relativePath, handler, filter...)
 
 }
 func (p *Router) Delete(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	p.R(3, relativePath, handler, filter...)
+	p.add(3, relativePath, handler, filter...)
 
 }
 func (p *Router) Put(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	p.R(4, relativePath, handler, filter...)
+	p.add(4, relativePath, handler, filter...)
 
 }
 
