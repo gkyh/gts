@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+type M map[string]interface{}
 type Context struct {
 	Writer   http.ResponseWriter
 	Request  *http.Request
@@ -22,15 +23,15 @@ func (c *Context) Session() *Store {
 		Response:  c.Writer,
 	}
 }
-func (c *Context) Write(b []byte) {
+func (c *Context) Write(status int, b []byte) {
 
-	c.Writer.WriteHeader(http.StatusOK)
+	c.Writer.WriteHeader(status)
 	c.Writer.Write(b)
 }
 
-func (c *Context) WriteString(status int, s string) {
+func (c *Context) WriteString(s string) {
 
-	c.Writer.WriteHeader(status)
+	//c.Writer.WriteHeader(status)
 	io.WriteString(c.Writer, s)
 }
 
@@ -39,7 +40,7 @@ func (c *Context) HTML(status int, s string) {
 	w := c.Writer
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	io.WriteString(w, s)
+	w.Write([]byte(s))
 }
 
 func (c *Context) JSON(status int, m map[string]interface{}) {
@@ -50,12 +51,19 @@ func (c *Context) JSON(status int, m map[string]interface{}) {
 	jsonBytes, _ := json.Marshal(m)
 	w.Write(jsonBytes)
 }
+func (c *Context) Map(m map[string]interface{}) {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	//w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(m)
+}
 
 func (c *Context) Result(s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 	io.WriteString(w, s)
 }
 
@@ -63,7 +71,7 @@ func (c *Context) Msg(s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 	io.WriteString(w, `{"code": 200, "msg": "`+s+`"}`)
 }
 
@@ -71,7 +79,7 @@ func (c *Context) OK() {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 	io.WriteString(w, `{"code": 200, "msg": "处理成功"}`)
 }
 
