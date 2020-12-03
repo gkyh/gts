@@ -14,7 +14,23 @@ type Context struct {
 	Sessions *Session
 }
 
-func (c *Context) FormValue(key, val string) {
+func (c *Context) ReqValue(params ...string) map[string]interface{} {
+
+	//req.ParseForm()
+	req := c.Request
+	m := make(map[string]interface{})
+	for _, value := range params {
+
+		val := req.FormValue(value)
+		if val == "null" || val == "" {
+			continue
+		}
+		m[value] = req.FormValue(value)
+	}
+	return m
+}
+
+func (c *Context) FormValue(key, val string) string {
 
 	str := c.Request.FormValue(key)
 
