@@ -3,6 +3,7 @@ package gts
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -92,6 +93,13 @@ func (c *Context) Result(s string) {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	//w.WriteHeader(http.StatusOK)
 	io.WriteString(w, s)
+}
+func (c *Context) Err(code int32, s string) {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	//w.WriteHeader(http.StatusOK)
+	io.WriteString(w, fmt.Sprintf(`{"code": %d, "msg": "%s"}`, code, s))
 }
 
 func (c *Context) Msg(s string) {
