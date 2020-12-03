@@ -75,9 +75,21 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Path
 	method := r.Method
 
-	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
-
 	print("[", method, "]", url)
+
+	if fileLen > 0 && isStatic(url) { //静态资源
+		for k, f := range fileRoutes {
+
+			if strings.HasPrefix(url, k) {
+				f(w, r)
+				return
+			}
+		}
+		print("not found file:", r.URL.String())
+		http.Error(w, "Bad file:"+r.URL.String(), http.StatusBadRequest)
+	}
+
+	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
 
 	var t int = 0
 	t = Type[method]
@@ -98,19 +110,14 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	*/
 
-	//静态资源
-	if fileLen > 0 {
-		for k, f := range fileRoutes {
-
-			if strings.HasPrefix(url, k) {
-				f(w, r)
-				return
-			}
-		}
-	}
-
 	print("not found URL:", r.URL.String())
 	http.Error(w, "Bad URL:"+r.URL.String(), http.StatusBadRequest)
+
+}
+
+func isStatic(url string) bool {
+
+	return strings.Contains(url, ".")
 
 }
 
