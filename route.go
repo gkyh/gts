@@ -110,6 +110,13 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	*/
 
+	nofound := fileRoutes["No-Found-URL-Error-404"]
+	if nofound != nil {
+
+		nofound(w, r)
+		return
+	}
+
 	print("not found URL:", r.URL.String())
 	http.Error(w, "Bad URL:"+r.URL.String(), http.StatusBadRequest)
 
@@ -204,6 +211,12 @@ func (p *Router) StaticDir(relativePath string, dir string) {
 		}
 
 	}
+	fileLen++
+}
+
+func (p *Router) NoFound(handler http.HandlerFunc) {
+
+	fileRoutes["No-Found-URL-Error-404"] = handler
 	fileLen++
 }
 func (p *Router) StaticFs(relativePath string, handler http.HandlerFunc) {

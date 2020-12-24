@@ -59,7 +59,7 @@ func (c *Context) Write(status int, b []byte) {
 
 func (c *Context) WriteString(s string) {
 
-	//c.Writer.WriteHeader(status)
+	c.Writer.WriteHeader(200)
 	io.WriteString(c.Writer, s)
 }
 
