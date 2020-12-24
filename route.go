@@ -114,6 +114,11 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Bad URL:"+r.URL.String(), http.StatusBadRequest)
 
 }
+func (p *Router) GetSession(r *http.Request, key string) interface{} {
+
+	v, _ := p.ses.Get(r, key)
+	return v
+}
 
 func isStatic(url string) bool {
 
@@ -179,6 +184,25 @@ func (p *Router) Static(relativePath string, dirPath string) {
 	fileRoutes[relativePath] = func(w http.ResponseWriter, r *http.Request) {
 
 		http.StripPrefix(relativePath, http.FileServer(http.Dir(dirPath))).ServeHTTP(w, r)
+	}
+	fileLen++
+}
+
+func (p *Router) StaticDir(relativePath string, dir string) {
+
+	fileRoutes[relativePath] = func(w http.ResponseWriter, r *http.Request) {
+
+		file := dir + r.URL.Path[1:len(r.URL.Path)]
+
+		info, err := os.Stat(file)
+		if err == nil && !info.IsDir() {
+			http.ServeFile(w, r, file)
+		} else {
+
+			w.WriteHeader(404)
+			w.Write([]byte(`not found ` + file))
+		}
+
 	}
 	fileLen++
 }
