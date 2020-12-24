@@ -214,6 +214,20 @@ func (p *Router) StaticDir(relativePath string, dir string) {
 	fileLen++
 }
 
+func (p *Router) File(relativePath string, filePath string, filter ...HandlerFun) {
+
+	var handler = func(req *http.Request, c *Context) {
+
+		info, err := os.Stat(filePath)
+		if err == nil && !info.IsDir() {
+
+			http.ServeFile(c.Writer, req, filePath)
+		}
+	}
+	p.add(1, relativePath, handler, filter...)
+
+}
+
 func (p *Router) NoFound(handler http.HandlerFunc) {
 
 	fileRoutes["No-Found-URL-Error-404"] = handler
