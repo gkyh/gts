@@ -2,7 +2,7 @@ package gts
 
 import (
 	"crypto/rand"
-	"encoding/base64"
+	//"encoding/base64"
 	"io"
 	"net/http"
 	"net/url"
@@ -255,7 +255,9 @@ func (ses *Session) NewSessionID() string {
 		nano := time.Now().UnixNano() //微秒
 		return strconv.FormatInt(nano, 10)
 	}
-	return base64.URLEncoding.EncodeToString(b)
+
+	return Encode(b, BitcoinAlphabet)
+	//return base64.URLEncoding.EncodeToString(b)
 }
 
 //——————————————————————————
