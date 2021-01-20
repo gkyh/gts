@@ -12,7 +12,7 @@ type M map[string]interface{}
 type Context struct {
 	Writer   http.ResponseWriter
 	Request  *http.Request
-	Sessions *Session
+	Sessions Session
 }
 
 func (c *Context) ReqValue(params ...string) map[string]interface{} {

@@ -16,7 +16,7 @@ type Router struct {
 	rLen   []int
 	routes []map[string]HandlerFunc
 	mws    []HandlerFun
-	ses    *Session
+	ses    Session
 	base   string
 }
 
@@ -52,9 +52,22 @@ func New() *Router {
 	}
 }
 
+type SessionContext struct {
+	Session
+}
+
 func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
 
-	p.ses = NewSession(cookieName, maxLifeTime, cookieTime)
+	s := NewCookieSession(cookieName, maxLifeTime, cookieTime)
+
+	p.ses = &SessionContext{Session: s}
+
+}
+func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string) {
+
+	s := NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd)
+	p.ses = &SessionContext{Session: s}
+
 }
 
 func (p *Router) Logger(log RouteLogger) {

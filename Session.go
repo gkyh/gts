@@ -12,12 +12,12 @@ import (
 )
 
 type Store struct {
-	Sessions  *Session
+	Sessions  Session
 	SessionID string
 	Response  http.ResponseWriter
 }
 
-func (c *Store) Get(key interface{}) interface{} {
+func (c *Store) Get(key string) interface{} {
 
 	session := c.Sessions
 
@@ -27,7 +27,7 @@ func (c *Store) Get(key interface{}) interface{} {
 	return session.GetVal(c.SessionID, key)
 
 }
-func (c *Store) Set(key interface{}, value interface{}) bool {
+func (c *Store) Set(key string, value interface{}) bool {
 
 	session := c.Sessions
 	if session == nil {
@@ -46,8 +46,20 @@ func (c *Store) Del() {
 	c.Sessions.Remove(c.SessionID)
 }
 
+type Session interface {
+	New(w http.ResponseWriter) string
+	Del(w http.ResponseWriter, r *http.Request)
+	Remove(sessionID string)
+	SetVal(sessionID string, key string, value interface{}) error
+	GetVal(sessionID string, key string) interface{}
+	SessionID(r *http.Request) (string, bool)
+	Set(r *http.Request, key string, value interface{}) bool
+	Get(r *http.Request, key string) (interface{}, bool)
+	NewSessionID() string
+}
+
 /*Session会话管理*/
-type Session struct {
+type CookieSession struct {
 	mCookieName  string       //客户端cookie名称
 	mLock        sync.RWMutex //互斥(保证线程安全)
 	mMaxLifeTime int64        //垃圾回收时间
@@ -56,9 +68,9 @@ type Session struct {
 }
 
 //创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
-func NewSession(cookieName string, maxLifeTime, cookieTime int64) *Session {
+func NewCookieSession(cookieName string, maxLifeTime, cookieTime int64) *CookieSession {
 
-	ses := &Session{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime, mSessions: make(map[string]*Provider)}
+	ses := &CookieSession{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime, mSessions: make(map[string]*Provider)}
 	//启动定时回收
 	go ses.GC()
 
@@ -66,7 +78,7 @@ func NewSession(cookieName string, maxLifeTime, cookieTime int64) *Session {
 }
 
 //在开始页面登陆页面，开始Session
-func (ses *Session) New(w http.ResponseWriter) string {
+func (ses *CookieSession) New(w http.ResponseWriter) string {
 
 	ses.mLock.Lock()
 	defer ses.mLock.Unlock()
@@ -84,7 +96,7 @@ func (ses *Session) New(w http.ResponseWriter) string {
 }
 
 //结束Session
-func (ses *Session) Del(w http.ResponseWriter, r *http.Request) {
+func (ses *CookieSession) Del(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(ses.mCookieName)
 	if err != nil || cookie.Value == "" {
 		return
@@ -102,7 +114,7 @@ func (ses *Session) Del(w http.ResponseWriter, r *http.Request) {
 }
 
 //结束session
-func (ses *Session) Remove(sessionID string) {
+func (ses *CookieSession) Remove(sessionID string) {
 	ses.mLock.Lock()
 	defer ses.mLock.Unlock()
 
@@ -110,17 +122,18 @@ func (ses *Session) Remove(sessionID string) {
 }
 
 //设置session里面的值
-func (ses *Session) SetVal(sessionID string, key interface{}, value interface{}) {
+func (ses *CookieSession) SetVal(sessionID string, key string, value interface{}) error {
 	ses.mLock.Lock()
 	defer ses.mLock.Unlock()
 
 	if session, ok := ses.mSessions[sessionID]; ok {
 		session.mValues[key] = value
 	}
+	return nil
 }
 
 //得到session里面的值
-func (ses *Session) GetVal(sessionID string, key interface{}) interface{} {
+func (ses *CookieSession) GetVal(sessionID string, key string) interface{} {
 	ses.mLock.RLock()
 	defer ses.mLock.RUnlock()
 
@@ -135,7 +148,7 @@ func (ses *Session) GetVal(sessionID string, key interface{}) interface{} {
 }
 
 //得到sessionID列表
-func (ses *Session) GetSessionIDList() []string {
+func (ses *CookieSession) GetSessionIDList() []string {
 	ses.mLock.RLock()
 	defer ses.mLock.RUnlock()
 
@@ -148,7 +161,7 @@ func (ses *Session) GetSessionIDList() []string {
 	return sessionIDList[0:len(sessionIDList)]
 }
 
-func (ses *Session) SessionID(r *http.Request) (string, bool) {
+func (ses *CookieSession) SessionID(r *http.Request) (string, bool) {
 	var cookie, err = r.Cookie(ses.mCookieName)
 	if cookie == nil ||
 		err != nil {
@@ -170,7 +183,7 @@ func (ses *Session) SessionID(r *http.Request) (string, bool) {
 	return "", false
 }
 
-func (ses *Session) Set(r *http.Request, key interface{}, value interface{}) bool {
+func (ses *CookieSession) Set(r *http.Request, key string, value interface{}) bool {
 
 	var cookie, err = r.Cookie(ses.mCookieName)
 	if cookie == nil ||
@@ -193,7 +206,7 @@ func (ses *Session) Set(r *http.Request, key interface{}, value interface{}) boo
 	return false
 
 }
-func (ses *Session) Get(r *http.Request, key interface{}) (interface{}, bool) {
+func (ses *CookieSession) Get(r *http.Request, key string) (interface{}, bool) {
 
 	var cookie, err = r.Cookie(ses.mCookieName)
 	if cookie == nil ||
@@ -221,7 +234,7 @@ func (ses *Session) Get(r *http.Request, key interface{}) (interface{}, bool) {
 }
 
 //更新最后访问时间
-func (ses *Session) GetLastAccessTime(sessionID string) time.Time {
+func (ses *CookieSession) GetLastAccessTime(sessionID string) time.Time {
 	ses.mLock.RLock()
 	defer ses.mLock.RUnlock()
 
@@ -233,7 +246,7 @@ func (ses *Session) GetLastAccessTime(sessionID string) time.Time {
 }
 
 //GC回收
-func (ses *Session) GC() {
+func (ses *CookieSession) GC() {
 	ses.mLock.Lock()
 	defer ses.mLock.Unlock()
 
@@ -249,7 +262,7 @@ func (ses *Session) GC() {
 }
 
 //创建唯一ID
-func (ses *Session) NewSessionID() string {
+func (ses *CookieSession) NewSessionID() string {
 	b := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
 		nano := time.Now().UnixNano() //微秒
