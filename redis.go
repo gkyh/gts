@@ -1,13 +1,12 @@
 package gts
 
 import (
-	"crypto/rand"
 	"github.com/garyburd/redigo/redis"
 	"github.com/vmihailenco/msgpack"
-	"io"
+
 	"net/http"
 	"net/url"
-	"strconv"
+
 	"time"
 )
 
@@ -96,14 +95,14 @@ func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64, RedisHost
 func (ses *RedisSession) New(w http.ResponseWriter) string {
 
 	//无论原来有没有，都重新创建一个新的session
-	newSessionID := url.QueryEscape(ses.NewSessionID())
+	newSessionID := url.QueryEscape(newSessionID())
 
 	mValues := map[string]interface{}{newSessionID: newSessionID}
 
 	b, err := msgpack.Marshal(mValues)
 	if err == nil {
 
-		SetEx(newSessionID, b, int32(ses.mMaxLifeTime))
+		SetEx(ses.mCookieName+newSessionID, b, int32(ses.mMaxLifeTime))
 	}
 
 	//让浏览器cookie设置过期时间
@@ -120,7 +119,7 @@ func (ses *RedisSession) Del(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 
-		DelEx(cookie.Value)
+		DelEx(ses.mCookieName + cookie.Value)
 
 		//让浏览器cookie立刻过期
 		expiration := time.Now()
@@ -132,13 +131,13 @@ func (ses *RedisSession) Del(w http.ResponseWriter, r *http.Request) {
 //结束session
 func (ses *RedisSession) Remove(sessionID string) {
 
-	DelEx(sessionID)
+	DelEx(ses.mCookieName + sessionID)
 }
 
 //设置session里面的值
 func (ses *RedisSession) SetVal(sessionID string, key string, value interface{}) error {
 
-	b, err := GetEx(sessionID)
+	b, err := GetEx(ses.mCookieName + sessionID)
 	if err != nil {
 
 		return err
@@ -158,14 +157,14 @@ func (ses *RedisSession) SetVal(sessionID string, key string, value interface{})
 		return err
 	}
 
-	return SetEx(sessionID, m, int32(ses.mMaxLifeTime))
+	return SetEx(ses.mCookieName+sessionID, m, int32(ses.mMaxLifeTime))
 
 }
 
 //得到session里面的值
 func (ses *RedisSession) GetVal(sessionID string, key string) interface{} {
 
-	b, err := GetEx(sessionID)
+	b, err := GetEx(ses.mCookieName + sessionID)
 	if err != nil {
 
 		return nil
@@ -177,7 +176,7 @@ func (ses *RedisSession) GetVal(sessionID string, key string) interface{} {
 		return nil
 	}
 
-	SetEx(sessionID, b, int32(ses.mMaxLifeTime))
+	SetEx(ses.mCookieName+sessionID, b, int32(ses.mMaxLifeTime))
 
 	return out[key]
 }
@@ -197,13 +196,13 @@ func (ses *RedisSession) SessionID(r *http.Request) (string, bool) {
 
 	sessionID := cookie.Value
 
-	b, err := GetEx(sessionID)
+	b, err := GetEx(ses.mCookieName + sessionID)
 	if err != nil {
 
 		return "", false
 	}
 
-	SetEx(sessionID, b, int32(ses.mMaxLifeTime))
+	SetEx(ses.mCookieName+sessionID, b, int32(ses.mMaxLifeTime))
 
 	return sessionID, true
 }
@@ -218,7 +217,7 @@ func (ses *RedisSession) Set(r *http.Request, key string, value interface{}) boo
 
 	sessionID := cookie.Value
 
-	b, err := GetEx(sessionID)
+	b, err := GetEx(ses.mCookieName + sessionID)
 	if err != nil {
 
 		return false
@@ -238,7 +237,7 @@ func (ses *RedisSession) Set(r *http.Request, key string, value interface{}) boo
 		return false
 	}
 
-	err = SetEx(sessionID, m, int32(ses.mMaxLifeTime))
+	err = SetEx(ses.mCookieName+sessionID, m, int32(ses.mMaxLifeTime))
 	if err != nil {
 
 		return false
@@ -256,7 +255,7 @@ func (ses *RedisSession) Get(r *http.Request, key string) (interface{}, bool) {
 
 	sessionID := cookie.Value
 
-	b, err := GetEx(sessionID)
+	b, err := GetEx(ses.mCookieName + sessionID)
 	if err != nil {
 
 		return nil, false
@@ -268,7 +267,7 @@ func (ses *RedisSession) Get(r *http.Request, key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	SetEx(sessionID, b, int32(ses.mMaxLifeTime))
+	SetEx(ses.mCookieName+sessionID, b, int32(ses.mMaxLifeTime))
 
 	if out[key] == nil {
 
@@ -276,29 +275,4 @@ func (ses *RedisSession) Get(r *http.Request, key string) (interface{}, bool) {
 	}
 	return out[key], true
 
-}
-
-//更新最后访问时间
-func (ses *RedisSession) GetLastAccessTime(sessionID string) time.Time {
-
-	b, err := GetEx(sessionID)
-	if err != nil {
-
-		return time.Now()
-	}
-	SetEx(sessionID, b, int32(ses.mMaxLifeTime))
-
-	return time.Now()
-}
-
-//创建唯一ID
-func (ses *RedisSession) NewSessionID() string {
-	b := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		nano := time.Now().UnixNano() //微秒
-		return strconv.FormatInt(nano, 10)
-	}
-
-	return Encode(b, BitcoinAlphabet)
-	//return base64.URLEncoding.EncodeToString(b)
 }

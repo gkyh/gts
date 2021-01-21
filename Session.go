@@ -55,7 +55,6 @@ type Session interface {
 	SessionID(r *http.Request) (string, bool)
 	Set(r *http.Request, key string, value interface{}) bool
 	Get(r *http.Request, key string) (interface{}, bool)
-	NewSessionID() string
 }
 
 /*Session会话管理*/
@@ -84,7 +83,7 @@ func (ses *CookieSession) New(w http.ResponseWriter) string {
 	defer ses.mLock.Unlock()
 
 	//无论原来有没有，都重新创建一个新的session
-	newSessionID := url.QueryEscape(ses.NewSessionID())
+	newSessionID := url.QueryEscape(newSessionID())
 
 	//存指针
 	ses.mSessions[newSessionID] = &Provider{mSessionID: newSessionID, mLastTimeAccessed: time.Now(), mValues: make(map[interface{}]interface{})}
@@ -262,7 +261,7 @@ func (ses *CookieSession) GC() {
 }
 
 //创建唯一ID
-func (ses *CookieSession) NewSessionID() string {
+func newSessionID() string {
 	b := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
 		nano := time.Now().UnixNano() //微秒

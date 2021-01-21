@@ -13,11 +13,11 @@ type IRouter interface {
 }
 
 type Router struct {
-	rLen   []int
-	routes []map[string]HandlerFunc
-	mws    []HandlerFun
-	ses    Session
-	base   string
+	rLen    []int
+	routes  []map[string]HandlerFunc
+	mws     []HandlerFun
+	session Session
+	base    string
 }
 
 var (
@@ -33,6 +33,7 @@ var (
 	}
 )
 
+var session Session
 var logger RouteLogger
 
 type RouteLogger interface {
@@ -45,28 +46,23 @@ func New() *Router {
 	mwRoutes = make(map[string]HandlerFun)
 
 	return &Router{
-		routes: []map[string]HandlerFunc{make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc)},
-		rLen:   make([]int, 5),
-		ses:    nil,
-		base:   "",
+		routes:  []map[string]HandlerFunc{make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc)},
+		rLen:    make([]int, 5),
+		session: nil,
+		base:    "",
 	}
-}
-
-type SessionContext struct {
-	Session
 }
 
 func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
 
-	s := NewCookieSession(cookieName, maxLifeTime, cookieTime)
-
-	p.ses = &SessionContext{Session: s}
+	session = NewCookieSession(cookieName, maxLifeTime, cookieTime)
+	p.session = session
 
 }
 func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string) {
 
-	s := NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd)
-	p.ses = &SessionContext{Session: s}
+	session = NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd)
+	p.session = session
 
 }
 
@@ -102,7 +98,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad file:"+r.URL.String(), http.StatusBadRequest)
 	}
 
-	ctx := &Context{Writer: w, Request: r, Sessions: p.ses}
+	ctx := &Context{Writer: w, Request: r, Sessions: p.session}
 
 	var t int = 0
 	t = Type[method]
@@ -136,7 +132,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func (p *Router) GetSession(r *http.Request, key string) interface{} {
 
-	v, _ := p.ses.Get(r, key)
+	v, _ := session.Get(r, key)
 	return v
 }
 
