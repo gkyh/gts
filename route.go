@@ -116,9 +116,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(handler) > 0 {
 		for k, f := range handler {
 
-			ok := strings.HasPrefix(url, k)
-			print(ok)
-			if ok {
+			if strings.HasPrefix(url, k) {
 				f(w, r)
 				return
 			}
@@ -280,7 +278,6 @@ func (p *Router) Use(h HandlerFun) {
 
 func (p *Router) Any(relativePath string, handler HandlerFunc, filter ...HandlerFun) {
 
-	//p.R(0, relativePath, handler, filter...)
 	p.add(1, relativePath, handler, filter...)
 	p.add(2, relativePath, handler, filter...)
 
