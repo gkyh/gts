@@ -24,6 +24,7 @@ var (
 	fileLen    = 0
 	fileRoutes map[string]http.HandlerFunc
 	mwRoutes   map[string]HandlerFun
+	handler    map[string]http.HandlerFunc
 	Type       = map[string]int{
 		"Any":    0,
 		"GET":    1,
@@ -44,6 +45,7 @@ func New() *Router {
 
 	fileRoutes = make(map[string]http.HandlerFunc)
 	mwRoutes = make(map[string]HandlerFun)
+	handler = make(map[string]http.HandlerFunc)
 
 	return &Router{
 		routes:  []map[string]HandlerFunc{make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc)},
@@ -96,6 +98,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		print("not found file:", r.URL.String())
 		http.Error(w, "Bad file:"+r.URL.String(), http.StatusBadRequest)
+		return
 	}
 
 	ctx := &Context{Writer: w, Request: r, Sessions: p.session}
@@ -109,15 +112,18 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	/*
-		if p.rLen[0] > 0 {
-			if fun, ok := p.routes[0][url]; ok {
 
-				fun(r, ctx)
+	if len(handler) > 0 {
+		for k, f := range handler {
+
+			ok := strings.HasPrefix(url, k)
+			print(ok)
+			if ok {
+				f(w, r)
 				return
 			}
 		}
-	*/
+	}
 
 	nofound := fileRoutes["No-Found-URL-Error-404"]
 	if nofound != nil {
@@ -202,6 +208,12 @@ func (p *Router) Static(relativePath string, dirPath string) {
 		http.StripPrefix(relativePath, http.FileServer(http.Dir(dirPath))).ServeHTTP(w, r)
 	}
 	fileLen++
+}
+
+func (p *Router) Handler(relativePath string, h http.HandlerFunc) {
+
+	handler[relativePath] = h
+	print(relativePath, " ==> ", &h)
 }
 
 func (p *Router) StaticDir(relativePath string, dir string) {
