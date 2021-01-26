@@ -53,18 +53,21 @@ func (c *Context) Session() *Store {
 }
 func (c *Context) Write(status int, b []byte) {
 
+	print(string(b))
 	c.Writer.WriteHeader(status)
 	c.Writer.Write(b)
 }
 
 func (c *Context) WriteString(s string) {
 
+	print(s)
 	c.Writer.WriteHeader(200)
 	io.WriteString(c.Writer, s)
 }
 
 func (c *Context) HTML(status int, s string) {
 
+	print(s)
 	w := c.Writer
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
@@ -77,13 +80,14 @@ func (c *Context) JSON(status int, m map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	w.WriteHeader(status)
 	jsonBytes, _ := json.Marshal(m)
+	print(string(jsonBytes))
 	w.Write(jsonBytes)
 }
 func (c *Context) Map(m map[string]interface{}) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	//w.WriteHeader(http.StatusOK)
+	print(m)
 	json.NewEncoder(w).Encode(m)
 }
 
@@ -91,23 +95,25 @@ func (c *Context) Result(s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	//w.WriteHeader(http.StatusOK)
+	print(s)
 	io.WriteString(w, s)
 }
 func (c *Context) Err(code int32, s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	//w.WriteHeader(http.StatusOK)
-	io.WriteString(w, fmt.Sprintf(`{"code": %d, "msg": "%s"}`, code, s))
+	str := fmt.Sprintf(`{"code": %d, "msg": "%s"}`, code, s)
+	print(str)
+	io.WriteString(w, str)
 }
 
 func (c *Context) Msg(s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	//w.WriteHeader(http.StatusOK)
-	io.WriteString(w, `{"code": 200, "msg": "`+s+`"}`)
+	str := fmt.Sprintf(`{"code": 200, "msg": "%s"}`, s)
+	print(str)
+	io.WriteString(w, str)
 }
 
 func (c *Context) OK() {
@@ -115,13 +121,16 @@ func (c *Context) OK() {
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	//w.WriteHeader(http.StatusOK)
-	io.WriteString(w, `{"code": 200, "msg": "处理成功"}`)
+	str := `{"code": 200, "msg": "处理成功"}`
+	print(str)
+	io.WriteString(w, str)
 }
 
 func (c *Context) Redirect(url string) {
 
 	w := c.Writer
 	r := c.Request
+	print("Redirect:" + url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
