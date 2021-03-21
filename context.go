@@ -150,3 +150,17 @@ func (c *Context) Get(key string) map[string]interface{} {
 
 	return c.Request.Context().Value(key).(map[string]interface{})
 }
+func (c *Context) SetString(key, value string) {
+
+	ctx := context.WithValue(c.Request.Context(), key, value)
+	c.Request = c.Request.WithContext(ctx)
+}
+
+func (c *Context) GetString(key string) string {
+
+	v := c.Request.Context().Value(key)
+	if v != nil {
+		return v.(string)
+	}
+	return ""
+}
