@@ -1,7 +1,7 @@
 package gts
 
 import (
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/vmihailenco/msgpack"
 
 	"net/http"
@@ -25,13 +25,19 @@ type RedisPool struct {
 	Pool *redis.Pool
 }
 
-func newRedisPool(server, password string) (*RedisPool, error) {
+func newRedisPool(server, password string, database ...int) (*RedisPool, error) {
+
+	db := 0
+	if database != nil {
+
+		db = database[0]
+	}
 
 	pool := &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
+			c, err := redis.Dial("tcp", server, redis.DialDatabase(db))
 			if err != nil {
 				return nil, err
 			}
@@ -77,11 +83,11 @@ func GetEx(key string) ([]byte, error) {
 }
 
 //创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
-func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string) *RedisSession {
+func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string, database ...int) *RedisSession {
 
 	var err error
 
-	rp, err = newRedisPool(RedisHost, RedisPwd)
+	rp, err = newRedisPool(RedisHost, RedisPwd, database...)
 	if err != nil {
 		panic(err)
 	}

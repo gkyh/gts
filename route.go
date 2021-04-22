@@ -61,9 +61,9 @@ func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
 	p.session = session
 
 }
-func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string) {
+func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string, database ...int) {
 
-	session = NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd)
+	session = NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd, database...)
 	p.session = session
 
 }
