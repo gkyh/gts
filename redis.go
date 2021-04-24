@@ -37,7 +37,7 @@ func newRedisPool(server, password string, database ...int) (*RedisPool, error) 
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server, redis.DialDatabase(db))
+			c, err := redis.Dial("tcp", server)
 			if err != nil {
 				return nil, err
 			}
@@ -47,6 +47,10 @@ func newRedisPool(server, password string, database ...int) (*RedisPool, error) 
 					c.Close()
 					return nil, err
 				}
+			}
+			if _, err := c.Do("SELECT", db); err != nil {
+				c.Close()
+				return nil, err
 			}
 			return c, err
 		},
