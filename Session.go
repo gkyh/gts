@@ -88,7 +88,7 @@ func (ses *CookieSession) New(w http.ResponseWriter) string {
 	//存指针
 	ses.mSessions[newSessionID] = &Provider{mSessionID: newSessionID, mLastTimeAccessed: time.Now(), mValues: make(map[interface{}]interface{})}
 	//让浏览器cookie设置过期时间
-	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true,Secure: true, MaxAge: int(ses.mCookieTime)}
+	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true, Secure: true, MaxAge: int(ses.mCookieTime)}
 	http.SetCookie(w, &cookie)
 
 	return newSessionID
@@ -107,7 +107,7 @@ func (ses *CookieSession) Del(w http.ResponseWriter, r *http.Request) {
 
 		//让浏览器cookie立刻过期
 		expiration := time.Now()
-		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true, Secure: true,›Expires: expiration, MaxAge: -1}
+		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true, Secure: true, Expires: expiration, MaxAge: -1}
 		http.SetCookie(w, &cookie)
 	}
 }
