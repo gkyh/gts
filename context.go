@@ -91,12 +91,11 @@ func (c *Context) Map(m map[string]interface{}) {
 	json.NewEncoder(w).Encode(m)
 }
 
-func (c *Context) Result(s string) {
+func (c *Context) Result(s interface{}) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	print(s)
-	io.WriteString(w, s)
+	json.NewEncoder(w).Encode(m)
 }
 func (c *Context) Err(code int32, s string) {
 
