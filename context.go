@@ -91,7 +91,7 @@ func (c *Context) Map(m map[string]interface{}) {
 	json.NewEncoder(w).Encode(m)
 }
 
-func (c *Context) Result(s interface{}) {
+func (c *Context) Result(m interface{}) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
