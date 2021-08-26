@@ -123,6 +123,19 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if fileLen > 0 { //静态目录
+		for k, f := range fileRoutes {
+
+			if strings.HasPrefix(url, k) {
+				f(w, r)
+				return
+			}
+		}
+		print("not found file:", r.URL.String())
+		http.Error(w, "Bad file:"+r.URL.String(), http.StatusBadRequest)
+		return
+	}
+
 	nofound := fileRoutes["No-Found-URL-Error-404"]
 	if nofound != nil {
 
@@ -332,4 +345,22 @@ func (p *Router) Route(url string, i IRouter, params ...HandlerFun) {
 	i.Router(p)
 	p.base = ""
 
+}
+func ErrRespone(next HandlerFunc) HandlerFunc {
+	return func(r *http.Request, ctx *Context) {
+
+		defer func() {
+			if err := recover(); err != nil {
+
+				print(err)
+				ctx.WriteString(err.(string))
+				return
+			}
+		}()
+		next(r, ctx)
+	}
+}
+func (p *Router) UseErrResp() {
+
+	p.mws = append(p.mws, ErrRespone)
 }
