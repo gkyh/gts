@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type IRouter interface {
@@ -33,6 +34,9 @@ var (
 		"PUT":    4,
 	}
 )
+
+var srvReadTimeout int = 30
+var srvWriteTimeout int = 60
 
 var session Session
 var logger RouteLogger
@@ -80,6 +84,29 @@ func print(v ...interface{}) {
 
 type HandlerFunc func(*http.Request, *Context)
 type HandlerFun func(HandlerFunc) HandlerFunc
+
+func (p *Router) ServerTimeout(readTimeout, writeTimeout int) {
+
+	srvReadTimeout = readTimeout
+	srvWriteTimeout = writeTimeout
+}
+
+func (p *Router) Run(addr string) {
+
+	srv := &http.Server{
+		Addr:           addr,
+		Handler:        p,
+		ReadTimeout:    time.Duration(srvReadTimeout) * time.Second,
+		WriteTimeout:   time.Duration(srvWriteTimeout) * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1 MB
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		print(err)
+		panic(err)
+	}
+
+}
 
 func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
