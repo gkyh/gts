@@ -1,5 +1,10 @@
 package gts
 
+import (
+	"encoding/json"
+	"net/http"
+)
+
 type Result struct {
 	Message string      `json:"msg"`
 	Code    int         `json:"code"` // 200 means success, other means fail
@@ -26,6 +31,11 @@ const Unavilable int = 503 //请求未能应答
 
 type ResultBuilder struct {
 	result *Result
+	writer http.ResponseWriter
+}
+
+func NewResp(w http.ResponseWriter) ResultBuilder {
+	return ResultBuilder{result: &Result{Code: StatusOk, Message: "", Data: nil}, writer: w}
 }
 
 // success default is true, code default is 200
@@ -87,6 +97,13 @@ func (builder ResultBuilder) Build() *Result {
 	return builder.result
 }
 
+func (builder ResultBuilder) Bd() {
+
+	w := builder.writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	json.NewEncoder(w).Encode(builder.result)
+}
+
 type Resource struct {
 	Message     string      `json:"msg"`
 	Code        int         `json:"code"` // 200 means success, other means fail
@@ -98,6 +115,11 @@ type Resource struct {
 
 type ResourceBuilder struct {
 	resource *Resource
+	writer   http.ResponseWriter
+}
+
+func NewResData(w http.ResponseWriter) ResourceBuilder {
+	return ResourceBuilder{resource: &Resource{Code: StatusOk, Message: "OK", Data: nil, TotalPage: 0, PageSize: "0", CurrentPage: "0"}, writer: w}
 }
 
 // success default is true, code default is 200
@@ -136,4 +158,11 @@ func (builder ResourceBuilder) CurrentPage(i string) ResourceBuilder {
 
 func (builder ResourceBuilder) Build() *Resource {
 	return builder.resource
+}
+
+func (builder ResourceBuilder) Bd() {
+
+	w := builder.writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	json.NewEncoder(w).Encode(builder.resource)
 }

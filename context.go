@@ -83,6 +83,7 @@ func (c *Context) JSON(status int, m map[string]interface{}) {
 	print(string(jsonBytes))
 	w.Write(jsonBytes)
 }
+
 func (c *Context) Map(m map[string]interface{}) {
 
 	w := c.Writer
@@ -97,7 +98,7 @@ func (c *Context) Result(m interface{}) {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	json.NewEncoder(w).Encode(m)
 }
-func (c *Context) Err(code int32, s string) {
+func (c *Context) Msg(code int32, s string) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
@@ -106,13 +107,13 @@ func (c *Context) Err(code int32, s string) {
 	io.WriteString(w, str)
 }
 
-func (c *Context) Msg(s string) {
+func (c *Context) Resp() ResultBuilder {
 
-	w := c.Writer
-	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	str := fmt.Sprintf(`{"code": 200, "msg": "%s"}`, s)
-	print(str)
-	io.WriteString(w, str)
+	return NewResp(c.Writer)
+}
+func (c *Context) RespData() ResourceBuilder {
+
+	return NewResData(c.Writer)
 }
 
 func (c *Context) OK() {
