@@ -53,7 +53,7 @@ func (c *Context) Session() *Store {
 }
 func (c *Context) Write(status int, b []byte) {
 
-	print(string(b))
+	//print(string(b))
 	c.Writer.WriteHeader(status)
 	c.Writer.Write(b)
 }
@@ -80,7 +80,7 @@ func (c *Context) JSON(status int, m map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	w.WriteHeader(status)
 	jsonBytes, _ := json.Marshal(m)
-	print(string(jsonBytes))
+	//print(string(jsonBytes))
 	w.Write(jsonBytes)
 }
 
@@ -88,7 +88,7 @@ func (c *Context) Map(m map[string]interface{}) {
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	print(m)
+	//print(m)
 	json.NewEncoder(w).Encode(m)
 }
 
@@ -103,10 +103,34 @@ func (c *Context) Msg(code int32, s string) {
 	w := c.Writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	str := fmt.Sprintf(`{"code": %d, "msg": "%s"}`, code, s)
-	print(str)
+	//print(str)
+	io.WriteString(w, str)
+}
+func (c *Context) Err(code int32, s string) {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	str := fmt.Sprintf(`{"code": %d, "msg": "%s"}`, code, s)
+	//print(str)
 	io.WriteString(w, str)
 }
 
+func (c *Context) NotFound() {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	io.WriteString(w, `{"code": 404, "msg": "信息不存在"}`)
+}
+func (c *Context) NoPermis() {
+
+	w := c.Writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	io.WriteString(w, `{"code": 403, "msg": "没有操作权限"}`)
+}
+func (c *Context) NoAuth() {
+
+	c.Write(401,[]byte(`{"code": 401, "msg": "auth error"}`))
+}
 func (c *Context) Resp() ResultBuilder {
 
 	return NewResp(c.Writer)
@@ -122,7 +146,7 @@ func (c *Context) OK() {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	//w.WriteHeader(http.StatusOK)
 	str := `{"code": 200, "msg": "处理成功"}`
-	print(str)
+	//print(str)
 	io.WriteString(w, str)
 }
 
@@ -130,7 +154,7 @@ func (c *Context) Redirect(url string) {
 
 	w := c.Writer
 	r := c.Request
-	print("Redirect:" + url)
+	//print("Redirect:" + url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
