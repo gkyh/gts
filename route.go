@@ -150,7 +150,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if fileLen > 0 { //静态目录
+	if fileLen > 0 && isStatic(url){ //静态目录
 		for k, f := range fileRoutes {
 
 			if strings.HasPrefix(url, k) {
