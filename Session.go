@@ -64,12 +64,13 @@ type CookieSession struct {
 	mMaxLifeTime int64        //垃圾回收时间
 	mCookieTime  int64
 	mSessions    map[string]*Provider //保存session的指针[sessionID] = session
+	mSecure      bool
 }
 
 //创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
-func NewCookieSession(cookieName string, maxLifeTime, cookieTime int64) *CookieSession {
+func NewCookieSession(cookieName string, maxLifeTime, cookieTime int64, secure bool) *CookieSession {
 
-	ses := &CookieSession{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime, mSessions: make(map[string]*Provider)}
+	ses := &CookieSession{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime, mSecure: secure, mSessions: make(map[string]*Provider)}
 	//启动定时回收
 	go ses.GC()
 
@@ -88,7 +89,7 @@ func (ses *CookieSession) New(w http.ResponseWriter) string {
 	//存指针
 	ses.mSessions[newSessionID] = &Provider{mSessionID: newSessionID, mLastTimeAccessed: time.Now(), mValues: make(map[interface{}]interface{})}
 	//让浏览器cookie设置过期时间
-	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true, Secure: true, MaxAge: int(ses.mCookieTime)}
+	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true, Secure: ses.mSecure, MaxAge: int(ses.mCookieTime)}
 	http.SetCookie(w, &cookie)
 
 	return newSessionID
@@ -107,7 +108,7 @@ func (ses *CookieSession) Del(w http.ResponseWriter, r *http.Request) {
 
 		//让浏览器cookie立刻过期
 		expiration := time.Now()
-		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true, Secure: true, Expires: expiration, MaxAge: -1}
+		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true, Secure: ses.mSecure, Expires: expiration, MaxAge: -1}
 		http.SetCookie(w, &cookie)
 	}
 }
