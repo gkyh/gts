@@ -16,6 +16,7 @@ type RedisSession struct {
 	//mLock        sync.RWMutex //互斥(保证线程安全)
 	mMaxLifeTime int64 //垃圾回收时间
 	mCookieTime  int64
+	mSecure      bool
 	//mSessions    map[string]*Provider //保存session的指针[sessionID] = session
 }
 
@@ -87,7 +88,7 @@ func GetEx(key string) ([]byte, error) {
 }
 
 //创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
-func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string, database ...int) *RedisSession {
+func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64,secure bool, RedisHost, RedisPwd string, database ...int) *RedisSession {
 
 	var err error
 
@@ -96,7 +97,7 @@ func NewRedisSession(cookieName string, maxLifeTime, cookieTime int64, RedisHost
 		panic(err)
 	}
 
-	ses := &RedisSession{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime}
+	ses := &RedisSession{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mCookieTime: cookieTime, mSecure: secure}
 
 	return ses
 }
@@ -116,7 +117,7 @@ func (ses *RedisSession) New(w http.ResponseWriter) string {
 	}
 
 	//让浏览器cookie设置过期时间
-	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true, MaxAge: int(ses.mCookieTime)}
+	cookie := http.Cookie{Name: ses.mCookieName, Value: newSessionID, Path: "/", HttpOnly: true,Secure: ses.mSecure, MaxAge: int(ses.mCookieTime)}
 	http.SetCookie(w, &cookie)
 
 	return newSessionID
@@ -133,7 +134,7 @@ func (ses *RedisSession) Del(w http.ResponseWriter, r *http.Request) {
 
 		//让浏览器cookie立刻过期
 		expiration := time.Now()
-		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true, Expires: expiration, MaxAge: -1}
+		cookie := http.Cookie{Name: ses.mCookieName, Path: "/", HttpOnly: true,Secure: ses.mSecure, Expires: expiration, MaxAge: -1}
 		http.SetCookie(w, &cookie)
 	}
 }
