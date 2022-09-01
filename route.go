@@ -59,15 +59,15 @@ func New() *Router {
 	}
 }
 
-func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64) {
+func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64, secure bool) {
 
-	session = NewCookieSession(cookieName, maxLifeTime, cookieTime)
+	session = NewCookieSession(cookieName, maxLifeTime, cookieTime, secure)
 	p.session = session
 
 }
-func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, RedisHost, RedisPwd string, database ...int) {
+func (p *Router) Redis(cookieName string, maxLifeTime, cookieTime int64, secure bool, RedisHost, RedisPwd string, database ...int) {
 
-	session = NewRedisSession(cookieName, maxLifeTime, cookieTime, RedisHost, RedisPwd, database...)
+	session = NewRedisSession(cookieName, maxLifeTime, cookieTime, secure, RedisHost, RedisPwd, database...)
 	p.session = session
 
 }
