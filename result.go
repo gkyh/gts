@@ -103,11 +103,18 @@ func (builder ResultBuilder) Bd() {
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
 	json.NewEncoder(w).Encode(builder.result)
 }
+func (builder ResultBuilder) JSON() {
+
+	w := builder.writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	json.NewEncoder(w).Encode(builder.result)
+}
 
 type Resource struct {
 	Message     string      `json:"msg"`
 	Code        int         `json:"code"` // 200 means success, other means fail
 	Data        interface{} `json:"data"`
+	Total       int32       `json:"total"`
 	TotalPage   int32       `json:"totalPage"`
 	PageSize    string      `json:"pageSize"`
 	CurrentPage string      `json:"currentPage"`
@@ -124,7 +131,7 @@ func NewResData(w http.ResponseWriter) ResourceBuilder {
 
 // success default is true, code default is 200
 func NewResource(data interface{}) ResourceBuilder {
-	return ResourceBuilder{resource: &Resource{Code: StatusOk, Message: "OK", Data: data, TotalPage: 0, PageSize: "0", CurrentPage: "0"}}
+	return ResourceBuilder{resource: &Resource{Code: StatusOk, Message: "OK", Data: data, Total: 0, TotalPage: 0, PageSize: "0", CurrentPage: "0"}}
 }
 
 func (builder ResourceBuilder) Code(code int) ResourceBuilder {
@@ -146,6 +153,11 @@ func (builder ResourceBuilder) TotalPage(i int32) ResourceBuilder {
 	return builder
 }
 
+func (builder ResourceBuilder) Total(i int32) ResourceBuilder {
+	builder.resource.Total = i
+	return builder
+}
+
 func (builder ResourceBuilder) PageSize(i string) ResourceBuilder {
 	builder.resource.PageSize = i
 	return builder
@@ -161,6 +173,13 @@ func (builder ResourceBuilder) Build() *Resource {
 }
 
 func (builder ResourceBuilder) Bd() {
+
+	w := builder.writer
+	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
+	json.NewEncoder(w).Encode(builder.resource)
+}
+
+func (builder ResourceBuilder) JSON() {
 
 	w := builder.writer
 	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
