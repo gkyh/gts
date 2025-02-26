@@ -188,15 +188,15 @@ func (c *Context) GetString(key string) string {
 	}
 	return ""
 }
-func (c *Context) SetCookie(key, value string, minute int){
+func (c *Context) SetCookie(key, value string, minute int, secure bool){
 
-	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, Secure: true, MaxAge: 60*minute}
+	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, Secure: secure, MaxAge: 60*minute}
 	w := c.Writer
 	http.SetCookie(w, &cookie)
 }
 func (c *Context) GetCookie(key string) (string,error){
 
-	cookie, err := c.Request.Cookie("cookie_name")
+	cookie, err := c.Request.Cookie(key)
 	if err != nil{
 		return "",err
 	}
