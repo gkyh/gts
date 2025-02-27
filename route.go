@@ -198,6 +198,7 @@ func middleware(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 }
 
 //执行拦截器
+/*
 func filter(url string, h HandlerFunc) HandlerFunc {
 
 	v := reflect.ValueOf(h)
@@ -216,8 +217,30 @@ func filter(url string, h HandlerFunc) HandlerFunc {
 	}
 
 	return h
+}*/
+func filter(url string, h HandlerFunc) HandlerFunc {
+    v := reflect.ValueOf(h)
+    fn := runtime.FuncForPC(v.Pointer()).Name()
+    
+    // 创建一个临时的 HandlerFun slice 来存储所有匹配的过滤器
+    var matchedFilters []HandlerFun
+    
+    for k, f := range mwRoutes {
+        if strings.Contains(fn, k) { // 按类名匹配
+            matchedFilters = append(matchedFilters, f)
+        }
+        if strings.HasPrefix(url, k) { // 按url匹配
+            matchedFilters = append(matchedFilters, f)
+        }
+    }
+    
+    // 如果有匹配的过滤器，使用 middleware 函数应用它们
+    if len(matchedFilters) > 0 {
+        h = middleware(matchedFilters, h)
+    }
+    
+    return h
 }
-
 func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	url := p.base + path
