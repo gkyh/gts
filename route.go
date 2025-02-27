@@ -253,12 +253,14 @@ func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	if len(f) > 0 {
 
-		m[url] = filter(url, middleware(p.mws, f[0](h)))
-	} else {
+		//m[url] = filter(url, middleware(p.mws, f[0](h)))
+		h = middleware(f, h)
+		
+	}// else {
 
-		m[url] = filter(url, middleware(p.mws, h))
-	}
-
+	//	m[url] = filter(url, middleware(p.mws, h))
+	//}
+	m[url] = filter(url, middleware(p.mws, h))
 	p.rLen[i]++
 }
 
