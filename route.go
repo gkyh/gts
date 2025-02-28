@@ -373,7 +373,13 @@ func (p *Router) Group(url string, h func(r *Router), params ...HandlerFun) {
 
 	p.base = url
 	if len(params) > 0 {
-		mwRoutes[url] = params[0]
+		//mwRoutes[url] = params[0]
+		combinedFilter := func(next HandlerFunc) HandlerFunc {
+
+            		return middleware(params, next)
+        	}
+        
+        	mwRoutes[url] = combinedFilter
 	}
 	h(p)
 	p.base = ""
