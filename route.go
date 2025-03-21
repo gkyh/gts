@@ -422,3 +422,30 @@ func (p *Router) UseErrResp() {
 
 	p.mws = append(p.mws, ErrRespone)
 }
+func (p *Router) UseCors() {
+
+	p.mws = append(p.mws, Cors)
+}
+func Cors(next HandlerFunc) gts.HandlerFunc {
+	return func(req *http.Request, ctx *gts.Context) {
+
+		origin := req.Header.Get("Origin")
+		w := ctx.Writer
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// 处理预检请求（OPTIONS 请求）
+		if req.Method == "OPTIONS" {
+
+			//fmt.Println("OPTIONS req Host:", origin)
+			w.WriteHeader(http.StatusOK)
+			return
+		} else {
+
+			next(req, ctx)
+		}
+
+	}
+}
