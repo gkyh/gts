@@ -426,8 +426,8 @@ func (p *Router) UseCors() {
 
 	p.mws = append(p.mws, Cors)
 }
-func Cors(next HandlerFunc) gts.HandlerFunc {
-	return func(req *http.Request, ctx *gts.Context) {
+func Cors(next HandlerFunc) HandlerFunc {
+	return func(req *http.Request, ctx *Context) {
 
 		origin := req.Header.Get("Origin")
 		w := ctx.Writer
