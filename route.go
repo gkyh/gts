@@ -3,10 +3,12 @@ package gts
 import (
 	"net/http"
 	"os"
+	"os/signal"
 	"reflect"
 	"runtime"
 	"strings"
 	"time"
+	"context"
 )
 
 type IRouter interface {
@@ -101,10 +103,25 @@ func (p *Router) Run(addr string) {
 		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		print(err)
-		panic(err)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			print(err)
+			os.Exit(1)
+		}
 	}
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Kill, os.Interrupt)
+	<-quit
+
+	print("Shutdown Server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		print("Server Shutdown:", err)
+	}
+
+	print("Server exiting")
 
 }
 
