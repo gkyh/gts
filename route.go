@@ -108,7 +108,7 @@ func (p *Router) Run(addr string) {
 			print(err)
 			os.Exit(1)
 		}
-	}
+	}()
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Kill, os.Interrupt)
 	<-quit
