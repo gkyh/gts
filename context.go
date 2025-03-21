@@ -42,6 +42,17 @@ func (c *Context) FormValue(key, val string) string {
 	}
 }
 
+func (c *Context) CorsHandler() {
+
+	origin := c.Request.Header.Get("Origin")
+	w: = c.Writer
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+}
+
 func (c *Context) Session() *Store {
 
 	sid, _ := c.Sessions.SessionID(c.Request)
@@ -60,14 +71,14 @@ func (c *Context) Write(status int, b []byte) {
 
 func (c *Context) WriteString(s string) {
 
-	print(s)
+	//print(s)
 	c.Writer.WriteHeader(200)
 	io.WriteString(c.Writer, s)
 }
 
 func (c *Context) HTML(status int, s string) {
 
-	print(s)
+	//print(s)
 	w := c.Writer
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
