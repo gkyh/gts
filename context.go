@@ -199,11 +199,48 @@ func (c *Context) GetString(key string) string {
 	}
 	return ""
 }
-func (c *Context) SetCookie(key, value string, minute int, secure bool){
+func (c *Context) SetCookie(key, value string, minute int, args ...bool){
 
-	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, Secure: secure, MaxAge: 60*minute}
+	secure := true
+	httpOnly := true
+	if len(args)>0:
+		secure = args[0]
+	
+	if len(args)>1:
+		httpOnly = args[1]
+	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: httpOnly, Secure: secure, MaxAge: 60*minute}
 	w := c.Writer
 	http.SetCookie(w, &cookie)
+}
+//使用根域名，通常用于跨域访问cookie
+func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...bool){
+
+	host := req.Host
+	secure := true
+	httpOnly := true
+	if len(args)>0:
+		secure = args[0]
+
+	if len(args)>1:
+		httpOnly = args[1]
+	
+	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*minute}
+
+	if strings.Contains(host, "127.0.0.1") {
+		cookie.Domain = "127.0.0.1"
+	} else {
+
+		if strings.Contains(host, ".") {
+			parts := strings.Split(host, ".")
+			if len(parts) > 2 {
+				// 获取根域名
+				host = strings.Join(parts[len(parts)-2:], ".")
+			}
+		}
+		cookie.Domain = host
+	}
+
+	http.SetCookie(ctx.Writer, &cookie)
 }
 func (c *Context) GetCookie(key string) (string,error){
 
