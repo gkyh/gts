@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type M map[string]interface{}
@@ -217,7 +218,7 @@ func (c *Context) SetCookie(key, value string, minute int, args ...bool){
 //使用根域名，通常用于跨域访问cookie
 func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...bool){
 
-	host := req.Host
+	host := c.Request.Host
 	secure := true
 	httpOnly := true
 	if len(args)>0 {
@@ -228,7 +229,7 @@ func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...boo
 		httpOnly = args[1]
 	}
 	
-	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*minute}
+	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: httpOnly, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*minute}
 
 	if strings.Contains(host, "127.0.0.1") {
 		cookie.Domain = "127.0.0.1"
@@ -244,7 +245,7 @@ func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...boo
 		cookie.Domain = host
 	}
 
-	http.SetCookie(ctx.Writer, &cookie)
+	http.SetCookie(c.Writer, &cookie)
 }
 func (c *Context) GetCookie(key string) (string,error){
 
