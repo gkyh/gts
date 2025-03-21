@@ -45,7 +45,7 @@ func (c *Context) FormValue(key, val string) string {
 func (c *Context) CorsHandler() {
 
 	origin := c.Request.Header.Get("Origin")
-	w: = c.Writer
+	w := c.Writer
 	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -203,11 +203,13 @@ func (c *Context) SetCookie(key, value string, minute int, args ...bool){
 
 	secure := true
 	httpOnly := true
-	if len(args)>0:
+	if len(args)>0 {
 		secure = args[0]
+	}
 	
-	if len(args)>1:
+	if len(args)>1 {
 		httpOnly = args[1]
+	}
 	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: httpOnly, Secure: secure, MaxAge: 60*minute}
 	w := c.Writer
 	http.SetCookie(w, &cookie)
@@ -218,11 +220,13 @@ func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...boo
 	host := req.Host
 	secure := true
 	httpOnly := true
-	if len(args)>0:
+	if len(args)>0 {
 		secure = args[0]
-
-	if len(args)>1:
+	}
+	
+	if len(args)>1 {
 		httpOnly = args[1]
+	}
 	
 	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: true, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*minute}
 
