@@ -36,7 +36,8 @@ var (
 		"PUT":    4,
 	}
 )
-
+//设置cookie的默认过期时间，分钟，此配置不影响session过期设置
+var cookieExpiresTime = 15
 var srvReadTimeout int = 30
 var srvWriteTimeout int = 60
 
@@ -60,7 +61,10 @@ func New() *Router {
 		base:    "",
 	}
 }
+func (p *Router) SessionExpires(minute int){
 
+	cookieExpiresTime = minute
+}
 func (p *Router) Cookie(cookieName string, maxLifeTime, cookieTime int64, secure bool) {
 
 	session = NewCookieSession(cookieName, maxLifeTime, cookieTime, secure)
