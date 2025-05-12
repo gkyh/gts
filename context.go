@@ -215,8 +215,8 @@ func (c *Context) SetCookie(key, value string, minute int, args ...bool){
 	w := c.Writer
 	http.SetCookie(w, &cookie)
 }
-//使用根域名，通常用于跨域访问cookie
-func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...bool){
+//使用根域名，通常用于跨域访问cookie，过期时间为cookieExpiresTime
+func (c *Context) SetCookieAndDomain(key, value string, args ...bool){
 
 	host := c.Request.Host
 	secure := true
@@ -229,7 +229,7 @@ func (c *Context) SetCookieAndDomain(key, value string,  minute int, args ...boo
 		httpOnly = args[1]
 	}
 	
-	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: httpOnly, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*minute}
+	cookie := http.Cookie{Name: key, Value: value, Path: "/", HttpOnly: httpOnly, SameSite: http.SameSiteNoneMode, Secure: secure, MaxAge:  60*cookieExpiresTime}
 
 	if strings.Contains(host, "127.0.0.1") {
 		cookie.Domain = "127.0.0.1"
