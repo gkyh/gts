@@ -255,3 +255,27 @@ func (c *Context) GetCookie(key string) (string,error){
 	}
 	return cookie.Value,nil
 }
+
+func (c *Context) GetUid() int32 {
+
+	u := c.Get("user_jwt")
+	return u["Uid"].(int32)
+}
+func (c *Context) GetName() string {
+
+	u := c.Get("user_jwt")
+	return u["Name"].(string)
+}
+func (c *Context) GetRid() int32 {
+
+	u := c.Get("user_jwt")
+	return u["Rid"].(int32)
+}
+func (c *Context) UidAuth(id int32) {
+
+	u := c.Get("user_jwt")
+	uid := u["Uid"].(int32)
+	if id != uid {
+		panic(`{"code": 403, "msg": "没有操作权限"}`)
+	}
+}
