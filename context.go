@@ -143,11 +143,11 @@ func (c *Context) NoAuth() {
 
 	c.Write(401,[]byte(`{"code": 401, "msg": "auth error"}`))
 }
-func (c *Context) Resp() ResultBuilder {
+func (c *Context) Resp() *RespBuilder {
 
 	return NewResp(c.Writer)
 }
-func (c *Context) RespData() ResourceBuilder {
+func (c *Context) RespData() *RespBuilder {
 
 	return NewResp(c.Writer)
 }
