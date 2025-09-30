@@ -5,12 +5,6 @@ import (
 	"net/http"
 )
 
-type Result struct {
-	Message string      `json:"msg"`
-	Code    int         `json:"code"` // 200 means success, other means fail
-	Data    interface{} `json:"data"`
-}
-
 const StatusOk int = 200       // success
 const StatusUnknown int = 500  // fail,reason is unknown
 const StatusNotFound int = 404 // fail,reason is not found
@@ -29,90 +23,15 @@ const NotLimit int = 501   //不接受请求，如IP被限制
 const BadGateway int = 502 //外部异常，通常为请求第三方
 const Unavilable int = 503 //请求未能应答
 
-type ResultBuilder struct {
-	result *Result
-	writer http.ResponseWriter
-}
-
-func NewResp(w http.ResponseWriter) ResultBuilder {
-	return ResultBuilder{result: &Result{Code: StatusOk, Message: "", Data: nil}, writer: w}
-}
-
-// success default is true, code default is 200
-func NewResult() ResultBuilder {
-	return ResultBuilder{result: &Result{Code: StatusOk, Message: "", Data: nil}}
-}
-
-func (builder ResultBuilder) Code(code int) ResultBuilder {
-	builder.result.Code = code
-	return builder
-}
-func (builder ResultBuilder) Error(code int) ResultBuilder {
-	builder.result.Code = code
-	return builder
-}
-
-func (builder ResultBuilder) Message(message string) ResultBuilder {
-	builder.result.Message = message
-	return builder
-}
-func (builder ResultBuilder) NotPermis() ResultBuilder {
-
-	builder.result.Code = NotPermis
-	builder.result.Message = "没有操作权限，se000401"
-	return builder
-}
-func (builder ResultBuilder) NotFound() ResultBuilder {
-
-	builder.result.Code = StatusNotFound
-	builder.result.Message = "未找到的记录，re000404"
-	return builder
-}
-
-func (builder ResultBuilder) Success() ResultBuilder {
-
-	builder.result.Code = StatusOk
-	builder.result.Message = "OK"
-	return builder
-}
-
-func (builder ResultBuilder) OK() ResultBuilder {
-
-	builder.result.Code = StatusOk
-	return builder
-}
-
-func (builder ResultBuilder) Fail() ResultBuilder {
-
-	builder.result.Code = StatusUnknown
-	return builder
-}
-
-func (builder ResultBuilder) Data(data interface{}) ResultBuilder {
-	builder.result.Data = data
-	return builder
-}
-
-func (builder ResultBuilder) Build() *Result {
-	return builder.result
-}
-
-func (builder ResultBuilder) Bd() {
-
-	w := builder.writer
-	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	json.NewEncoder(w).Encode(builder.result)
-}
-func (builder ResultBuilder) JSON() {
-
-	w := builder.writer
-	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	json.NewEncoder(w).Encode(builder.result)
+type Result struct {
+	Message string      `json:"msg"`
+	Code    int         `json:"code"` // 200 means success, other means fail
+	Data    interface{} `json:"data"`
 }
 
 type Resource struct {
 	Message     string      `json:"msg"`
-	Code        int         `json:"code"` // 200 means success, other means fail
+	Code        int         `json:"code"`
 	Data        interface{} `json:"data"`
 	Total       int32       `json:"total"`
 	TotalPage   int32       `json:"totalPage"`
@@ -120,68 +39,128 @@ type Resource struct {
 	CurrentPage string      `json:"currentPage"`
 }
 
-type ResourceBuilder struct {
-	resource *Resource
-	writer   http.ResponseWriter
+// ---- Builder ----
+type RespBuilder struct {
+	writer http.ResponseWriter
+	isPage bool
+	result *Result
+	res    *Resource
 }
 
-func NewResData(w http.ResponseWriter) ResourceBuilder {
-	return ResourceBuilder{resource: &Resource{Code: StatusOk, Message: "OK", Data: nil, TotalPage: 0, PageSize: "0", CurrentPage: "0"}, writer: w}
+type ResultBuilder struct {
+	result *Result
+	writer http.ResponseWriter
 }
 
-// success default is true, code default is 200
-func NewResource(data interface{}) ResourceBuilder {
-	return ResourceBuilder{resource: &Resource{Code: StatusOk, Message: "OK", Data: data, Total: 0, TotalPage: 0, PageSize: "0", CurrentPage: "0"}}
+func NewResp(w http.ResponseWriter) *RespBuilder {
+	return &RespBuilder{
+		writer: w,
+		result: &Result{Code: StatusOk, Message: "OK"},
+	}
+}
+// ---- 通用方法 ----
+func (b *RespBuilder) Code(code int) *RespBuilder {
+	if b.isPage {
+		b.res.Code = code
+	} else {
+		b.result.Code = code
+	}
+	return b
 }
 
-func (builder ResourceBuilder) Code(code int) ResourceBuilder {
-	builder.resource.Code = code
-	return builder
-}
-func (builder ResourceBuilder) Message(s string) ResourceBuilder {
-	builder.resource.Message = s
-	return builder
-}
-
-func (builder ResourceBuilder) Data(data interface{}) ResourceBuilder {
-	builder.resource.Data = data
-	return builder
+func (b *RespBuilder) Message(msg string) *RespBuilder {
+	if b.isPage {
+		b.res.Message = msg
+	} else {
+		b.result.Message = msg
+	}
+	return b
 }
 
-func (builder ResourceBuilder) TotalPage(i int32) ResourceBuilder {
-	builder.resource.TotalPage = i
-	return builder
+func (b *RespBuilder) Data(data interface{}) *RespBuilder {
+	if b.isPage {
+		b.res.Data = data
+	} else {
+		b.result.Data = data
+	}
+	return b
 }
 
-func (builder ResourceBuilder) Total(i int32) ResourceBuilder {
-	builder.resource.Total = i
-	return builder
+// ---- 分页相关方法 ----
+func (b *RespBuilder) ensurePage() {
+	if !b.isPage {
+		b.isPage = true
+		b.res = &Resource{
+			Code:    b.result.Code,
+			Message: b.result.Message,
+			Data:    b.result.Data,
+		}
+		b.result = nil
+	}
 }
 
-func (builder ResourceBuilder) PageSize(i string) ResourceBuilder {
-	builder.resource.PageSize = i
-	return builder
+func (b *RespBuilder) Total(total int32) *RespBuilder {
+	b.ensurePage()
+	b.res.Total = total
+	return b
 }
 
-func (builder ResourceBuilder) CurrentPage(i string) ResourceBuilder {
-	builder.resource.CurrentPage = i
-	return builder
+func (b *RespBuilder) TotalPage(totalPage int32) *RespBuilder {
+	b.ensurePage()
+	b.res.TotalPage = totalPage
+	return b
 }
 
-func (builder ResourceBuilder) Build() *Resource {
-	return builder.resource
+func (b *RespBuilder) PageSize(size string) *RespBuilder {
+	b.ensurePage()
+	b.res.PageSize = size
+	return b
 }
 
-func (builder ResourceBuilder) Bd() {
-
-	w := builder.writer
-	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	json.NewEncoder(w).Encode(builder.resource)
+func (b *RespBuilder) CurrentPage(page string) *RespBuilder {
+	b.ensurePage()
+	b.res.CurrentPage = page
+	return b
 }
 
-func (builder ResourceBuilder) JSON() {
+// ---- 输出 ----
+func (b *RespBuilder) JSON() {
+	w := b.writer
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	w := builder.writer
-	w.Header().Set("Content-Type", "application/Json; charset=utf-8")
-	json.NewEncoder(w).Encode(builder.resource)
+	if b.isPage {
+		_ = json.NewEncoder(w).Encode(b.res)
+	} else {
+		_ = json.NewEncoder(w).Encode(b.result)
+	}
 }
+
+func (b *RespBuilder) Error(code int) *RespBuilder {
+	return b.Code(code)
+}
+
+// 没有操作权限
+func (b *RespBuilder) NotPermis() *RespBuilder {
+	return b.Code(NotPermis).Message("没有操作权限，se000401")
+}
+
+// 未找到
+func (b *RespBuilder) NotFound() *RespBuilder {
+	return b.Code(StatusNotFound).Message("未找到的记录，re000404")
+}
+
+// 成功
+func (b *RespBuilder) Success() *RespBuilder {
+	return b.Code(StatusOk).Message("OK")
+}
+
+// OK（只设置状态码）
+func (b *RespBuilder) OK() *RespBuilder {
+	return b.Code(StatusOk)
+}
+
+// 失败（未知原因）
+func (b *RespBuilder) Fail() *RespBuilder {
+	return b.Code(StatusUnknown)
+}
+
