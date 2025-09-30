@@ -149,7 +149,7 @@ func (c *Context) Resp() ResultBuilder {
 }
 func (c *Context) RespData() ResourceBuilder {
 
-	return NewResData(c.Writer)
+	return NewResp(c.Writer)
 }
 
 func (c *Context) OK() {
