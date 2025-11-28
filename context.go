@@ -32,6 +32,12 @@ func (c *Context) ReqValue(params ...string) map[string]interface{} {
 	return m
 }
 
+func (c *Context) Bind(i interface{}) error {
+
+	req := c.Request
+	return json.NewDecoder(req.Body).Decode(i)
+}
+
 func (c *Context) FormValue(key, val string) string {
 
 	str := c.Request.FormValue(key)
