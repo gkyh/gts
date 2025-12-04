@@ -113,8 +113,8 @@ func (p *Router) Run(addr string) {
 			os.Exit(1)
 		}
 	}()
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Kill, os.Interrupt)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	print("Shutdown Server ...")
@@ -164,7 +164,7 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(handler) > 0 {
 		for k, f := range handler {
 
-			if strings.HasPrefix(url, k) {
+			if strings.HasPrefix(url+"/", k+"/") {
 				f(w, r)
 				return
 			}
@@ -219,26 +219,6 @@ func middleware(mws []HandlerFun, h HandlerFunc) HandlerFunc {
 }
 
 //执行拦截器
-/*
-func filter(url string, h HandlerFunc) HandlerFunc {
-
-	v := reflect.ValueOf(h)
-	fn := runtime.FuncForPC(v.Pointer()).Name()
-
-	for k, f := range mwRoutes {
-
-		if strings.Contains(fn, k) { //按类名
-			h = f(h)
-		}
-
-		if strings.HasPrefix(url, k) { //按url
-			h = f(h)
-		}
-
-	}
-
-	return h
-}*/
 func filter(url string, h HandlerFunc) HandlerFunc {
     v := reflect.ValueOf(h)
     fn := runtime.FuncForPC(v.Pointer()).Name()
@@ -274,17 +254,19 @@ func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 
 	if len(f) > 0 {
 
-		//m[url] = filter(url, middleware(p.mws, f[0](h)))
 		h = middleware(f, h)
-		
-	}// else {
-
-	//	m[url] = filter(url, middleware(p.mws, h))
-	//}
+	}
+	
 	m[url] = filter(url, middleware(p.mws, h))
 	p.rLen[i]++
 }
+// route.handler("/user", handlerFunc)  访问： /user/abc 匹配
+func (p *Router) Handler(relativePath string, h http.HandlerFunc) {
 
+	handler[relativePath] = h
+	print(relativePath, " ==> ", &h)
+}
+//常规静态资源，如 css/js/images
 func (p *Router) Static(relativePath string, dirPath string) {
 
 	fileRoutes[relativePath] = func(w http.ResponseWriter, r *http.Request) {
@@ -294,12 +276,7 @@ func (p *Router) Static(relativePath string, dirPath string) {
 	fileLen++
 }
 
-func (p *Router) Handler(relativePath string, h http.HandlerFunc) {
-
-	handler[relativePath] = h
-	print(relativePath, " ==> ", &h)
-}
-
+// 指定目录结构，只能访问文件，无法递归目录
 func (p *Router) StaticDir(relativePath string, dir string) {
 
 	fileRoutes[relativePath] = func(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +295,12 @@ func (p *Router) StaticDir(relativePath string, dir string) {
 	}
 	fileLen++
 }
+// 自行处理文件实现，如OSS/FileDB/S3/虚拟文件系统
+func (p *Router) StaticFs(relativePath string, handler http.HandlerFunc) {
 
+	fileRoutes[relativePath] = handler
+	fileLen++
+}
 func (p *Router) File(relativePath string, filePath string, filter ...HandlerFun) {
 
 	var handler = func(req *http.Request, c *Context) {
@@ -338,11 +320,7 @@ func (p *Router) NoFound(handler http.HandlerFunc) {
 	fileRoutes["No-Found-URL-Error-404"] = handler
 	fileLen++
 }
-func (p *Router) StaticFs(relativePath string, handler http.HandlerFunc) {
 
-	fileRoutes[relativePath] = handler
-	fileLen++
-}
 
 func (p *Router) Favicon(dirPath string) {
 
