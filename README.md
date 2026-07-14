@@ -57,7 +57,10 @@ golang搭建极简的原生WEB后台项目
     //route.Any("/any", func)  添加get 和 post 方法
     //route.Post("/post", func)  
     //route.Get("/get", func)  
-    //route.Delete("/delete", func)  
+    //route.Delete("/delete", func)
+    // 原生http.handler
+    route.Handler("/path", func(w http.ResponseWriter, req *http.Request){
+	})
    
     route.Run(":8080")
 
