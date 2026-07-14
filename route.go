@@ -24,11 +24,14 @@ type Router struct {
 	base    string
 }
 
+type HandlerFunc func(*http.Request, *Context)
+type HandlerFun func(HandlerFunc) HandlerFunc
+
 var (
 	fileLen    = 0
 	fileRoutes map[string]http.HandlerFunc
 	mwRoutes   map[string]HandlerFun
-	handler    map[string]http.HandlerFunc
+	handler    map[string]HandlerFunc
 	Type       = map[string]int{
 		"Any":    0,
 		"GET":    1,
@@ -53,7 +56,7 @@ func New() *Router {
 
 	fileRoutes = make(map[string]http.HandlerFunc)
 	mwRoutes = make(map[string]HandlerFun)
-	handler = make(map[string]http.HandlerFunc)
+	handler = make(map[string]HandlerFunc)
 
 	return &Router{
 		routes:  []map[string]HandlerFunc{make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc), make(map[string]HandlerFunc)},
@@ -88,9 +91,6 @@ func print(v ...interface{}) {
 		logger.Println(v)
 	}
 }
-
-type HandlerFunc func(*http.Request, *Context)
-type HandlerFun func(HandlerFunc) HandlerFunc
 
 func (p *Router) ServerTimeout(readTimeout, writeTimeout int) {
 
@@ -166,7 +166,8 @@ func (p *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		for k, f := range handler {
 
 			if strings.HasPrefix(url+"/", k+"/") {
-				f(w, r)
+				ctx := &Context{Writer: w, Request: r, Sessions: p.session}
+            	f(r, ctx)  // 之前: f(w, r)
 				return
 			}
 		}
@@ -262,10 +263,22 @@ func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 	p.rLen[i]++
 }
 // route.handler("/user", handlerFunc)  访问： /user/abc 匹配
-func (p *Router) Handler(relativePath string, h http.HandlerFunc) {
+func (p *Router) Handler(relativePath string, h http.HandlerFunc, filter ...HandlerFun) {
+    // 将 http.HandlerFunc 适配为 HandlerFunc
+    adapted := func(r *http.Request, ctx *Context) {
+        h(ctx.Writer, r)
+    }
 
-	handler[relativePath] = h
-	print(relativePath, " ==> ", &h)
+    url := p.base + relativePath
+
+    // 应用路由级 filter
+    if len(filter) > 0 {
+        adapted = middleware(filter, adapted)
+    }
+
+    // 应用全局中间件 + mwRoutes 拦截器（与 add() 保持一致）
+    handler[url] = filter(url, middleware(p.mws, adapted))
+    print(url, " ==> ", &h)
 }
 //常规静态资源，如 css/js/images
 func (p *Router) Static(relativePath string, dirPath string) {
