@@ -263,7 +263,7 @@ func (p *Router) add(i int, path string, h HandlerFunc, f ...HandlerFun) {
 	p.rLen[i]++
 }
 // route.handler("/user", handlerFunc)  访问： /user/abc 匹配
-func (p *Router) Handler(relativePath string, h http.HandlerFunc, filter ...HandlerFun) {
+func (p *Router) Handler(relativePath string, h http.HandlerFunc, f ...HandlerFun) {
     // 将 http.HandlerFunc 适配为 HandlerFunc
     adapted := func(r *http.Request, ctx *Context) {
         h(ctx.Writer, r)
@@ -272,8 +272,8 @@ func (p *Router) Handler(relativePath string, h http.HandlerFunc, filter ...Hand
     url := p.base + relativePath
 
     // 应用路由级 filter
-    if len(filter) > 0 {
-        adapted = middleware(filter, adapted)
+    if len(f) > 0 {
+        adapted = middleware(f, adapted)
     }
 
     // 应用全局中间件 + mwRoutes 拦截器（与 add() 保持一致）
